@@ -8,7 +8,7 @@ export default function LoginPage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-8 px-6">
       <div className="flex flex-col gap-2">
-        <span className="text-sm font-semibold text-muted">Food + gym log</span>
+        <span className="text-sm font-semibold text-muted">Hybrid · food + gym</span>
         <h1 className="font-display text-5xl font-semibold tracking-tight">Hey.</h1>
       </div>
       {configured ? (

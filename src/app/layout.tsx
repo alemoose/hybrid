@@ -4,11 +4,11 @@ import "@fontsource-variable/space-grotesk";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Log",
+  title: "Hybrid",
   description: "Personal food and gym log",
   appleWebApp: {
     capable: true,
-    title: "Log",
+    title: "Hybrid",
     statusBarStyle: "black-translucent",
   },
 };

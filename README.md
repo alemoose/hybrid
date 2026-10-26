@@ -1,4 +1,4 @@
-# Log
+# Hybrid
 
 A personal food and gym log, in the "Paper Night" style. It's built for one person, and you add it to your phone's home screen like an app.
 
