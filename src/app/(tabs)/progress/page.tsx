@@ -3,7 +3,9 @@ import { CalendarIcon } from "@/components/icons";
 import { Card, EmptyState, PageHeader, SectionLabel } from "@/components/ui";
 import { getTimeZone } from "@/lib/auth";
 import { addDays, formatDayKey, formatInstant, todayKey } from "@/lib/dates";
+import { foodByDay, getGoals, spendingByRestaurant } from "@/lib/food-queries";
 import { formatNumber } from "@/lib/format";
+import { formatMoney } from "@/lib/nutrition";
 import { exercisesDone, getLiftTrends, workoutsByDay } from "@/lib/queries";
 
 export default async function ProgressPage() {
@@ -11,14 +13,30 @@ export default async function ProgressPage() {
   const today = todayKey(tz);
   const monthStart = `${today.slice(0, 8)}01`;
   const weekStart = addDays(today, -6);
-  const [lifts, done, month, week] = await Promise.all([
+  const [lifts, done, month, week, weekFood, monthFood, spending, goals] = await Promise.all([
     getLiftTrends(4),
     exercisesDone(),
     workoutsByDay(monthStart, today, tz),
     workoutsByDay(weekStart, today, tz),
+    // Last 7 full days: today is still in progress.
+    foodByDay(addDays(today, -7), addDays(today, -1), tz),
+    foodByDay(monthStart, today, tz),
+    spendingByRestaurant(monthStart, today, tz),
+    getGoals(),
   ]);
   const monthCount = [...month.values()].reduce((n, l) => n + l.length, 0);
   const weekVolume = [...week.values()].flat().reduce((t, w) => t + w.volume, 0);
+  const loggedDays = [...weekFood.values()].filter((d) => d.meals > 0);
+  const avg = (pick: (d: (typeof loggedDays)[number]) => number) =>
+    loggedDays.length ? loggedDays.reduce((t, d) => t + pick(d), 0) / loggedDays.length : 0;
+  const avgCalories = avg((d) => d.nutrients.calories);
+  const avgSodium = avg((d) => d.nutrients.sodium);
+  const saltyDays = loggedDays.filter((d) => d.nutrients.sodium > goals.sodium).length;
+  const monthSpent = [...monthFood.values()].reduce((t, d) => t + d.spentCents, 0);
+  // Spending "this week" = the last 6 full days plus today.
+  const weekSpent =
+    [...weekFood.entries()].filter(([k]) => k >= weekStart).reduce((t, [, d]) => t + d.spentCents, 0) +
+    (monthFood.get(today)?.spentCents ?? 0);
 
   return (
     <>
@@ -46,6 +64,58 @@ export default async function ProgressPage() {
           <span className="text-[13px] text-muted">lb, last 7 days</span>
         </Card>
       </div>
+
+      {loggedDays.length > 0 || monthSpent > 0 ? (
+        <div className="flex flex-col gap-2">
+          <SectionLabel>Food · last 7 days</SectionLabel>
+          <div className="grid grid-cols-2 gap-2.5">
+            <Card className="flex flex-col gap-1 rounded-[20px] p-4">
+              <span className="text-sm font-medium text-muted">Avg calories</span>
+              <span className="tabular font-display text-[30px] font-semibold tracking-[-1px]">
+                {loggedDays.length ? formatNumber(avgCalories) : "—"}
+              </span>
+              <span className="text-[13px] text-muted">goal {formatNumber(goals.calories)}</span>
+            </Card>
+            <Card className="flex flex-col gap-1 rounded-[20px] p-4">
+              <span className="text-sm font-medium text-muted">Avg sodium</span>
+              <span
+                className={`tabular font-display text-[30px] font-semibold tracking-[-1px] ${avgSodium > goals.sodium ? "text-warn" : ""}`}
+              >
+                {loggedDays.length ? formatNumber(avgSodium) : "—"}
+              </span>
+              <span className="text-[13px] text-muted">
+                mg · {saltyDays} of {loggedDays.length} days over
+              </span>
+            </Card>
+          </div>
+        </div>
+      ) : null}
+
+      {monthSpent > 0 ? (
+        <Card className="flex flex-col gap-0.5 px-5 py-4">
+          <div className="flex items-baseline justify-between pb-2">
+            <h2 className="font-display text-lg font-semibold">Food spending</h2>
+            <span className="tabular text-sm text-muted">{formatMoney(weekSpent)} this week</span>
+          </div>
+          <span className="tabular font-display text-[34px] leading-none font-semibold tracking-[-1px]">
+            {formatMoney(monthSpent)}
+          </span>
+          <span className="pb-2 text-[13px] text-muted">this month</span>
+          {spending.slice(0, 6).map((r) => (
+            <div key={r.restaurant} className="flex flex-col justify-center gap-1.5 border-t border-line py-2.5">
+              <div className="flex items-baseline justify-between">
+                <span className="text-[15px] font-semibold">{r.restaurant}</span>
+                <span className="tabular text-sm">
+                  <b>{formatMoney(r.cents)}</b> <span className="text-muted">· {r.visits}×</span>
+                </span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-line">
+                <div className="h-full rounded-full bg-gold" style={{ width: `${(r.cents / spending[0].cents) * 100}%` }} />
+              </div>
+            </div>
+          ))}
+        </Card>
+      ) : null}
 
       {lifts.length === 0 ? (
         <EmptyState title="Your charts start after your first workout">

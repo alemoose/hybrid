@@ -1,33 +1,81 @@
 import Link from "next/link";
 import { CloseIcon } from "@/components/icons";
 import { ResumeBanner } from "@/components/resume-banner";
-import { Card, SectionLabel } from "@/components/ui";
+import { SectionLabel, cx } from "@/components/ui";
+import { aiConfigured } from "@/lib/ai/estimate";
+import { getTimeZone } from "@/lib/auth";
+import { formatDayKey, localHour, todayKey } from "@/lib/dates";
+import { getGoals, listUsuals } from "@/lib/food-queries";
+import { defaultMeal } from "@/lib/nutrition";
 import { listRoutines } from "@/lib/queries";
+import { FoodLogger } from "./food-logger";
 
-export const dynamic = "force-dynamic";
+// Chain lookups search the web before answering.
+export const maxDuration = 120;
 
-export default async function AddPage() {
-  const routines = await listRoutines();
+export default async function AddPage({ searchParams }: PageProps<"/add">) {
+  const [sp, tz] = await Promise.all([searchParams, getTimeZone()]);
+  const mode = sp.mode === "workout" ? "workout" : "food";
+  const today = todayKey(tz);
+  const day = typeof sp.d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.d) && sp.d < today ? sp.d : undefined;
+  const dayQuery = day ? `&d=${day}` : "";
+
   return (
     <>
       <div className="flex items-center gap-7">
-        <Link href="/" aria-label="Close" className="circle-btn">
+        <Link href={day ? `/food?d=${day}` : "/"} aria-label="Close" className="circle-btn">
           <CloseIcon size={18} />
         </Link>
         <div role="group" aria-label="What are you logging" className="grid w-[210px] grid-cols-2 rounded-full bg-inner p-1">
-          <span className="flex h-9 items-center justify-center rounded-full text-sm font-semibold text-faint">Food</span>
-          <span className="flex h-9 items-center justify-center rounded-full bg-ink text-sm font-bold text-dark">
-            Workout
-          </span>
+          {(["food", "workout"] as const).map((m) => (
+            <Link
+              key={m}
+              href={`/add?mode=${m}${dayQuery}`}
+              aria-current={mode === m ? "page" : undefined}
+              replace
+              className={cx(
+                "flex h-9 items-center justify-center rounded-full text-sm capitalize",
+                mode === m ? "bg-ink font-bold text-dark" : "font-semibold text-muted",
+              )}
+            >
+              {m}
+            </Link>
+          ))}
         </div>
       </div>
 
-      <ResumeBanner />
+      {day ? (
+        <p className="px-1 text-sm font-semibold text-gold">
+          Logging for {formatDayKey(day, { weekday: "long", month: "short", day: "numeric" })}
+        </p>
+      ) : null}
 
+      {mode === "food" ? <FoodMode tz={tz} day={day} /> : <WorkoutMode />}
+    </>
+  );
+}
+
+async function FoodMode({ tz, day }: { tz: string; day?: string }) {
+  const [usuals, goals] = await Promise.all([listUsuals(8), getGoals()]);
+  return (
+    <FoodLogger
+      usuals={usuals}
+      aiReady={aiConfigured()}
+      defaultMeal={day ? "lunch" : defaultMeal(localHour(new Date(), tz))}
+      day={day}
+      sodiumGoal={goals.sodium}
+    />
+  );
+}
+
+async function WorkoutMode() {
+  const routines = await listRoutines();
+  return (
+    <>
+      <ResumeBanner />
       <Link href="/workout?empty=1" className="btn-outline h-14 justify-start rounded-2xl px-4 text-base">
         <span className="text-xl text-accent">+</span> Start empty workout
       </Link>
-
       {routines.length > 0 ? <SectionLabel>Start a routine</SectionLabel> : null}
       {routines.map((r) => (
         <Link
@@ -42,13 +90,6 @@ export default async function AddPage() {
           <span className="text-sm font-bold text-accent">Start</span>
         </Link>
       ))}
-
-      <Card className="flex flex-col gap-1.5 p-4">
-        <span className="text-[15px] font-bold">Food logging is next</span>
-        <span className="text-[13px] leading-relaxed text-muted">
-          Type, say or snap what you ate, with chain restaurant data and AI estimates for local spots.
-        </span>
-      </Card>
     </>
   );
 }

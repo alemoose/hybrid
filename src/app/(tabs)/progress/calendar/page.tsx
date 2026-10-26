@@ -3,6 +3,8 @@ import { BackIcon, ForwardIcon } from "@/components/icons";
 import { PageHeader } from "@/components/ui";
 import { getTimeZone } from "@/lib/auth";
 import { addDays, formatDayKey, keyToUtc, todayKey } from "@/lib/dates";
+import { foodByDay, getGoals } from "@/lib/food-queries";
+import { calorieStatus, sodiumGoalFor } from "@/lib/nutrition";
 import { workoutsByDay } from "@/lib/queries";
 import { CalendarView, type CalendarDay } from "./calendar-view";
 
@@ -18,7 +20,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/progres
   const month = typeof sp.m === "string" && /^\d{4}-\d{2}$/.test(sp.m) ? sp.m : today.slice(0, 7);
   const first = `${month}-01`;
   const last = addDays(`${shiftMonth(month, 1)}-01`, -1);
-  const byDay = await workoutsByDay(first, last, tz);
+  const [byDay, food, goals] = await Promise.all([workoutsByDay(first, last, tz), foodByDay(first, last, tz), getGoals()]);
 
   const days: CalendarDay[] = [];
   for (let key = first; key <= last; key = addDays(key, 1)) {
@@ -34,11 +36,26 @@ export default async function CalendarPage({ searchParams }: PageProps<"/progres
         volume: w.volume,
         sets: w.sets,
       })),
+      food: (() => {
+        const f = food.get(key);
+        if (!f) return null;
+        const trained = (byDay.get(key) ?? []).length > 0;
+        return {
+          calories: Math.round(f.nutrients.calories),
+          protein: Math.round(f.nutrients.protein),
+          sodium: Math.round(f.nutrients.sodium),
+          sodiumGoal: sodiumGoalFor(goals, trained),
+          water: Math.round(f.water),
+          spentCents: f.spentCents,
+          meals: f.meals,
+          status: key === today ? ("none" as const) : calorieStatus(f.nutrients.calories, goals.calories),
+        };
+      })(),
     });
   }
   const lead = keyToUtc(first).getUTCDay();
   const initial =
-    month === today.slice(0, 7) ? today : ([...days].reverse().find((d) => d.workouts.length)?.key ?? first);
+    month === today.slice(0, 7) ? today : ([...days].reverse().find((d) => d.workouts.length || d.food)?.key ?? first);
   const isCurrentOrFuture = month >= today.slice(0, 7);
 
   return (
@@ -63,7 +80,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/progres
           </div>
         }
       />
-      <CalendarView key={month} days={days} lead={lead} initial={initial} />
+      <CalendarView key={month} days={days} lead={lead} initial={initial} calorieGoal={goals.calories} />
     </>
   );
 }

@@ -1,17 +1,33 @@
 import Link from "next/link";
 import { createStarterRoutines } from "@/app/actions";
+import { NutritionCard } from "@/components/nutrition-card";
 import { ResumeBanner } from "@/components/resume-banner";
+import { WaterCard } from "@/components/water-card";
 import { WeekStrip } from "@/components/week-strip";
 import { Bar, Card, DateTile, PageHeader, Pill, SectionTitle, TextLink } from "@/components/ui";
 import { getTimeZone } from "@/lib/auth";
-import { formatDayKey, formatDuration, formatInstant, todayKey } from "@/lib/dates";
+import { addDays, formatDayKey, formatDuration, formatInstant, todayKey } from "@/lib/dates";
+import { getDayContext } from "@/lib/day-context";
+import { foodByDay } from "@/lib/food-queries";
 import { changeTone, daysSinceText, formatNumber } from "@/lib/format";
+import { calorieStatus } from "@/lib/nutrition";
 import { getUpNext, lastSevenDays, recentWorkouts } from "@/lib/queries";
 
 export default async function TodayPage() {
   const tz = await getTimeZone();
-  const [upNext, week, recent] = await Promise.all([getUpNext(tz), lastSevenDays(tz), recentWorkouts(3)]);
   const today = todayKey(tz);
+  const [upNext, week, recent, ctx, weekFood] = await Promise.all([
+    getUpNext(tz),
+    lastSevenDays(tz),
+    recentWorkouts(3),
+    getDayContext(today, tz),
+    foodByDay(addDays(today, -6), today, tz),
+  ]);
+  const strip = week.map((d) => ({
+    ...d,
+    // Today is still in progress, so it gets no verdict yet.
+    food: d.isToday ? ("none" as const) : calorieStatus(weekFood.get(d.key)?.nutrients.calories ?? 0, ctx.goals.calories),
+  }));
 
   return (
     <>
@@ -25,14 +41,17 @@ export default async function TodayPage() {
         }
       />
 
-      <WeekStrip days={week} />
+      <WeekStrip days={strip} />
       <ResumeBanner />
 
-      <Card className="flex flex-col gap-2 p-5">
-        <span className="text-[15px] font-medium text-muted">Calories left today</span>
-        <span className="font-display text-[44px] leading-none font-semibold tracking-[-2px] text-faint">—</span>
-        <span className="text-[13px] text-muted">Food logging is the next thing we build.</span>
-      </Card>
+      <NutritionCard
+        summary={ctx.food.summary}
+        goals={ctx.goals}
+        sodiumGoal={ctx.sodiumGoal}
+        trained={ctx.trained}
+        actions={{ logHref: "/add?mode=food", secondary: { href: "/food", label: "Food log" } }}
+      />
+      <WaterCard ounces={ctx.food.summary.water} goal={ctx.water.goal} why={ctx.water.why} />
 
       {upNext ? (
         <Card className="flex flex-col gap-0.5 px-5 py-4">

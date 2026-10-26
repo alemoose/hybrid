@@ -66,3 +66,29 @@ export function utcWindow(firstKey: string, lastKey: string): { from: Date; to: 
     to: new Date(keyToUtc(lastKey).getTime() + 2 * MS_DAY),
   };
 }
+
+/** The instant that is `hour`:00 local time on day `key` in `tz`. */
+export function zonedTime(key: string, hour: number, tz: string): Date {
+  const [y, m, d] = key.split("-").map(Number);
+  const guess = Date.UTC(y, m - 1, d, hour);
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+      .formatToParts(guess)
+      .map((p) => [p.type, Number(p.value)]),
+  );
+  const local = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute);
+  return new Date(guess - (local - guess));
+}
+
+/** Local hour (0–23) of an instant in `tz`. */
+export function localHour(date: Date | number, tz: string): number {
+  return Number(new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23", hour: "2-digit" }).format(date));
+}
