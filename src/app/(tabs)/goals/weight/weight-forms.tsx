@@ -5,9 +5,17 @@ import { useState, useTransition } from "react";
 import { deleteMeasurement, deleteWeight, saveBodyGoal } from "@/app/goal-actions";
 import { CloseIcon } from "@/components/icons";
 import { cx } from "@/components/ui";
-import { PACES } from "@/lib/body";
+import { defaultPace, pacesFor } from "@/lib/body";
 
-export function GoalWeightForm({ goalWeight, pace }: { goalWeight: number | null; pace: number }) {
+export function GoalWeightForm({
+  goalWeight,
+  pace,
+  currentWeight,
+}: {
+  goalWeight: number | null;
+  pace: number;
+  currentWeight: number | null;
+}) {
   const router = useRouter();
   const [weight, setWeight] = useState(goalWeight != null ? String(goalWeight) : "");
   const [p, setP] = useState(pace);
@@ -35,14 +43,19 @@ export function GoalWeightForm({ goalWeight, pace }: { goalWeight: number | null
           <input
             inputMode="decimal"
             value={weight}
-            onChange={(e) => setWeight(e.target.value)}
+            onChange={(e) => {
+              setWeight(e.target.value);
+              const next = Number.parseFloat(e.target.value);
+              const goal = Number.isFinite(next) ? next : null;
+              if (!pacesFor(currentWeight, goal).some((o) => o.value === p)) setP(defaultPace(currentWeight, goal));
+            }}
             className="tabular h-11 w-20 bg-transparent text-right text-[17px] font-semibold outline-none"
           />
           <span className="text-sm text-muted">lb</span>
         </span>
       </label>
       <div role="group" aria-label="Pace" className="grid grid-cols-2 gap-2">
-        {PACES.map((option) => (
+        {pacesFor(currentWeight, Number.isFinite(Number.parseFloat(weight)) ? Number.parseFloat(weight) : null).map((option) => (
           <button
             key={option.value}
             type="button"

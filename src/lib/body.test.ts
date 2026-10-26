@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  defaultPace,
   goalProgress,
+  pacesFor,
   maintenanceCalories,
   projectGoalDate,
   restingCalories,
@@ -86,5 +88,24 @@ describe("weeklyAverages", () => {
       4,
     );
     expect(pts.map((p) => p.weight)).toEqual([186, 183]);
+  });
+});
+
+describe("paces", () => {
+  it("only offers paces toward the goal", () => {
+    expect(pacesFor(140, 160).map((p) => p.value)).toEqual([0, 0.25, 0.5, 1]);
+    expect(pacesFor(182, 175).map((p) => p.value)).toEqual([-1, -0.5, 0]);
+    expect(pacesFor(null, 160)).toHaveLength(6);
+  });
+
+  it("defaults to half a pound a week in the goal's direction", () => {
+    expect(defaultPace(140, 160)).toBe(0.5);
+    expect(defaultPace(182, 175)).toBe(-0.5);
+    expect(defaultPace(150, 150.5)).toBe(0);
+  });
+
+  it("adds a surplus for a gain", () => {
+    const base = { sex: "male" as const, age: 20, heightIn: 70, activity: "moderate" as const, weightLb: 140, goalWeightLb: 160 };
+    expect(suggestTargets({ ...base, pace: 0.5 }).calories - suggestTargets({ ...base, pace: 0 }).calories).toBe(250);
   });
 });

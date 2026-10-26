@@ -4,7 +4,16 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type ReactNode } from "react";
 import { completeOnboarding, skipOnboarding } from "@/app/goal-actions";
 import { cx } from "@/components/ui";
-import { ACTIVITY, PACES, maintenanceCalories, suggestTargets, type Activity, type Profile, type Sex } from "@/lib/body";
+import {
+  ACTIVITY,
+  defaultPace,
+  maintenanceCalories,
+  pacesFor,
+  suggestTargets,
+  type Activity,
+  type Profile,
+  type Sex,
+} from "@/lib/body";
 import { formatNumber } from "@/lib/format";
 import { resizeImage, type ResizedImage } from "@/lib/image";
 import type { Goals } from "@/lib/nutrition";
@@ -99,10 +108,8 @@ export function Wizard({ initial }: { initial: Initial }) {
   // Goal
   const [goalWeight, setGoalWeight] = useState(initial.goalWeight != null ? String(initial.goalWeight) : "");
   const [pace, setPace] = useState(initial.pace);
-  // Food (null = follow the suggestion)
-  const [food, setFood] = useState<Record<"calories" | "protein" | "carbs" | "fat", string> | null>(
-    initial.profile ? { calories: String(g.calories), protein: String(g.protein), carbs: String(g.carbs), fat: String(g.fat) } : null,
-  );
+  // Food (null = follow the suggestion, which recalculates as weight, goal and pace change)
+  const [food, setFood] = useState<Record<"calories" | "protein" | "carbs" | "fat", string> | null>(null);
   const [sodium, setSodium] = useState(String(g.sodium));
   const [homeArea, setHomeArea] = useState(g.homeArea);
   // Water
@@ -253,10 +260,21 @@ export function Wizard({ initial }: { initial: Initial }) {
         <>
           <h1 className="px-1 font-display text-[28px] leading-tight font-semibold tracking-[-0.6px]">Where do you want to be?</h1>
           <Group>
-            <Field label="Goal weight" unit="lb" value={goalWeight} onChange={setGoalWeight} placeholder={w ? String(Math.round(w)) : "175"} />
+            <Field
+              label="Goal weight"
+              unit="lb"
+              value={goalWeight}
+              onChange={(v) => {
+                setGoalWeight(v);
+                // Switching from a loss goal to a gain goal (or back) picks a pace that heads the right way.
+                const next = num(v);
+                if (!pacesFor(w, next).some((p) => p.value === pace)) setPace(defaultPace(w, next));
+              }}
+              placeholder={w ? String(Math.round(w)) : "175"}
+            />
           </Group>
           <div className="grid grid-cols-2 gap-2">
-            {PACES.map((p) => (
+            {pacesFor(w, gw).map((p) => (
               <Choice key={p.value} selected={pace === p.value} onClick={() => setPace(p.value)} title={p.label} detail={p.detail} />
             ))}
           </div>

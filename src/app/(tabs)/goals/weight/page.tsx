@@ -15,7 +15,7 @@ export default async function WeightPage() {
       <SectionLabel>Log today</SectionLabel>
       <QuickWeight placeholder={latest ? latest.weight.toFixed(1) : "Weight"} />
       <SectionLabel>Goal</SectionLabel>
-      <GoalWeightForm goalWeight={goal?.goalWeight ?? null} pace={goal?.pace ?? -0.5} />
+      <GoalWeightForm goalWeight={goal?.goalWeight ?? null} pace={goal?.pace ?? 0} currentWeight={latest?.weight ?? null} />
       {weights.length > 0 ? (
         <>
           <SectionLabel>History</SectionLabel>

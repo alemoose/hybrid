@@ -15,8 +15,24 @@ export const PACES = [
   { value: -1, label: "Lose faster", detail: "1 lb a week" },
   { value: -0.5, label: "Lose steady", detail: "½ lb a week" },
   { value: 0, label: "Maintain", detail: "Stay around here" },
-  { value: 0.25, label: "Build", detail: "+¼ lb a week, lean gain" },
+  { value: 0.25, label: "Lean gain", detail: "+¼ lb a week, least fat" },
+  { value: 0.5, label: "Gain steady", detail: "+½ lb a week" },
+  { value: 1, label: "Gain faster", detail: "+1 lb a week, some fat too" },
 ] as const;
+
+const DIRECTION_GAP = 1;
+
+/** Only the paces that head toward the goal (plus maintain); all of them while either weight is unknown. */
+export function pacesFor(current: number | null, goal: number | null) {
+  if (current == null || goal == null || Math.abs(goal - current) < DIRECTION_GAP) return PACES;
+  return PACES.filter((p) => p.value === 0 || Math.sign(p.value) === Math.sign(goal - current));
+}
+
+/** A sensible pace once the goal's direction is known: ½ lb a week either way. */
+export function defaultPace(current: number | null, goal: number | null): number {
+  if (current == null || goal == null || Math.abs(goal - current) < DIRECTION_GAP) return 0;
+  return goal > current ? 0.5 : -0.5;
+}
 
 export type Profile = {
   sex: Sex;
