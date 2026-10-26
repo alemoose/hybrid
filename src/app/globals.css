@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+/* Paper Night: warm near-blacks, off-white ink, cobalt accent, pastel tiles. */
+@theme {
+  --color-bg: #141412;
+  --color-nav: #1a1a17;
+  --color-card: #1c1c19;
+  --color-inner: #242420;
+  --color-inner-2: #33332e;
+  --color-line: #2b2b27;
+  --color-line-strong: #3a3a35;
+  --color-dash: #4a4a44;
+
+  --color-ink: #f3f2ec;
+  --color-ink-2: #d9d8d1;
+  --color-muted: #a6a59d;
+  --color-faint: #8c8b84;
+  --color-dark: #141412;
+  --color-tile-ink: #15171c;
+
+  --color-accent: #8ea2ff;
+  --color-cobalt: #3d5af1;
+  --color-good: #4fd1a1;
+  --color-warn: #ff9466;
+  --color-gold: #f2c14e;
+  --color-ember: #eb6e3f;
+  --color-rose: #f5a3c4;
+
+  --color-p-yellow: #f3e3b5;
+  --color-p-blue: #cfe0f5;
+  --color-p-pink: #f5d3e0;
+  --color-p-green: #d6ebd9;
+
+  --font-sans: "DM Sans Variable", system-ui, sans-serif;
+  --font-display: "Space Grotesk Variable", "DM Sans Variable", sans-serif;
+}
+
+/* In the base layer so utilities (text colors, sizes) still win. */
+@layer base {
+  html {
+    background: var(--color-bg);
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@utility circle-btn {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-card);
+  color: var(--color-ink);
+}
+
+@utility btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: var(--color-ink);
+  color: var(--color-dark);
+  font-size: 15px;
+  font-weight: 700;
+  &:disabled {
+    opacity: 0.55;
+  }
+}
+
+@utility btn-outline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-card);
+  color: var(--color-ink);
+  font-size: 15px;
+  font-weight: 600;
+  &:disabled {
+    opacity: 0.55;
+  }
+}
+
+@utility chip {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 9999px;
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-card);
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  &[aria-pressed="true"] {
+    border-color: var(--color-ink);
+    background: var(--color-ink);
+    color: var(--color-dark);
+  }
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
