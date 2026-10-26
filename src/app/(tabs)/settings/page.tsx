@@ -10,7 +10,7 @@ export default async function SettingsPage() {
   const [tz, goals] = await Promise.all([getTimeZone(), getGoals()]);
   return (
     <>
-      <PageHeader back="/" eyebrow="You" title="Settings" />
+      <PageHeader back="/goals" eyebrow="You" title="Settings" />
 
       <SectionLabel>Daily goals</SectionLabel>
       <GoalsForm goals={goals} />
@@ -32,6 +32,9 @@ export default async function SettingsPage() {
           <span className="text-[15px] text-muted">Pounds · ounces</span>
         </div>
       </Card>
+      <a href="/welcome" className="btn-outline">
+        Run setup again
+      </a>
       {passwordConfigured() ? (
         <form action={logout}>
           <button type="submit" className="btn-outline w-full">

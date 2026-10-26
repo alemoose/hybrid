@@ -2,8 +2,9 @@ import Link from "next/link";
 import { BackIcon, ForwardIcon } from "@/components/icons";
 import { PageHeader } from "@/components/ui";
 import { getTimeZone } from "@/lib/auth";
-import { addDays, formatDayKey, keyToUtc, todayKey } from "@/lib/dates";
+import { addDays, dayKey, formatDayKey, keyToUtc, todayKey, utcWindow } from "@/lib/dates";
 import { foodByDay, getGoals } from "@/lib/food-queries";
+import { listWeights } from "@/lib/goal-queries";
 import { calorieStatus, sodiumGoalFor } from "@/lib/nutrition";
 import { workoutsByDay } from "@/lib/queries";
 import { CalendarView, type CalendarDay } from "./calendar-view";
@@ -20,7 +21,13 @@ export default async function CalendarPage({ searchParams }: PageProps<"/progres
   const month = typeof sp.m === "string" && /^\d{4}-\d{2}$/.test(sp.m) ? sp.m : today.slice(0, 7);
   const first = `${month}-01`;
   const last = addDays(`${shiftMonth(month, 1)}-01`, -1);
-  const [byDay, food, goals] = await Promise.all([workoutsByDay(first, last, tz), foodByDay(first, last, tz), getGoals()]);
+  const [byDay, food, goals, weights] = await Promise.all([
+    workoutsByDay(first, last, tz),
+    foodByDay(first, last, tz),
+    getGoals(),
+    listWeights(utcWindow(first, last).from.getTime()),
+  ]);
+  const weightByDay = new Map(weights.map((w) => [dayKey(w.at, tz), w.weight]));
 
   const days: CalendarDay[] = [];
   for (let key = first; key <= last; key = addDays(key, 1)) {
@@ -36,6 +43,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/progres
         volume: w.volume,
         sets: w.sets,
       })),
+      weight: weightByDay.get(key) ?? null,
       food: (() => {
         const f = food.get(key);
         if (!f) return null;

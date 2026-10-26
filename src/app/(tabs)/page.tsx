@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createStarterRoutines } from "@/app/actions";
 import { NutritionCard } from "@/components/nutrition-card";
 import { ResumeBanner } from "@/components/resume-banner";
@@ -11,10 +12,12 @@ import { getDayContext } from "@/lib/day-context";
 import { foodByDay } from "@/lib/food-queries";
 import { changeTone, daysSinceText, formatNumber } from "@/lib/format";
 import { calorieStatus } from "@/lib/nutrition";
+import { isOnboarded } from "@/lib/settings";
 import { getUpNext, lastSevenDays, recentWorkouts } from "@/lib/queries";
 
 export default async function TodayPage() {
-  const tz = await getTimeZone();
+  const [tz, onboarded] = await Promise.all([getTimeZone(), isOnboarded()]);
+  if (!onboarded) redirect("/welcome");
   const today = todayKey(tz);
   const [upNext, week, recent, ctx, weekFood] = await Promise.all([
     getUpNext(tz),
@@ -35,7 +38,7 @@ export default async function TodayPage() {
         eyebrow={formatDayKey(today, { weekday: "long", month: "long", day: "numeric" })}
         title="Today"
         right={
-          <Link href="/settings" aria-label="Settings" className="circle-btn text-sm font-bold">
+          <Link href="/goals" aria-label="Your goals" className="circle-btn text-sm font-bold">
             Me
           </Link>
         }

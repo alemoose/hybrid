@@ -7,6 +7,7 @@ import { CloseIcon, ForkIcon } from "@/components/icons";
 import { Pill, cx, type PillTone } from "@/components/ui";
 import type { LogMealInput, MealEstimate, UsualOption } from "@/lib/food-types";
 import { formatNumber } from "@/lib/format";
+import { resizeImage } from "@/lib/image";
 import { formatMoney, parseMoney, totals, withRestaurantCooking, type FoodItem } from "@/lib/nutrition";
 
 type Meal = LogMealInput["meal"];
@@ -45,28 +46,6 @@ const blankItem = (): DraftItem => ({
   sodium: 0,
 });
 
-/** Downscale a photo in the browser so uploads stay small and fast. */
-async function resizeImage(file: File): Promise<{ data: string; mediaType: string; preview: string }> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const el = new Image();
-      el.onload = () => resolve(el);
-      el.onerror = () => reject(new Error("Couldn't read that image."));
-      el.src = url;
-    });
-    const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(img.width * scale);
-    canvas.height = Math.round(img.height * scale);
-    canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
-    return { data: dataUrl.split(",")[1], mediaType: "image/jpeg", preview: dataUrl };
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
 type SpeechRecognitionLike = {
   lang: string;
   interimResults: boolean;
@@ -100,7 +79,7 @@ export function FoodLogger({
   const router = useRouter();
   const [meal, setMeal] = useState<Meal>(defaultMeal);
   const [text, setText] = useState("");
-  const [photo, setPhoto] = useState<{ data: string; mediaType: string; preview: string } | null>(null);
+  const [photo, setPhoto] = useState<{ data: string; mime: string; preview: string } | null>(null);
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [review, setReview] = useState<{
@@ -181,7 +160,7 @@ export function FoodLogger({
   const lookUp = () => {
     setError(null);
     startLooking(async () => {
-      const res = await estimateFood({ text, image: photo ? { data: photo.data, mediaType: photo.mediaType } : undefined });
+      const res = await estimateFood({ text, image: photo ? { data: photo.data, mediaType: photo.mime } : undefined });
       if (res.ok) startReview(res.estimate);
       else setError(res.error);
     });

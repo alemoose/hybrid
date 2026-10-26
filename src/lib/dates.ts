@@ -13,6 +13,11 @@ export function dayKey(date: Date | number, tz: string): string {
   }).format(date);
 }
 
+/** The current time, for server components (they render once per request). */
+export function requestTime(): number {
+  return Date.now();
+}
+
 /** Today's day key in `tz` (server components render once per request). */
 export function todayKey(tz: string): string {
   return dayKey(Date.now(), tz);

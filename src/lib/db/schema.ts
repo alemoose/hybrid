@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { blob, index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const exercises = sqliteTable("exercises", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -184,3 +184,75 @@ export const settings = sqliteTable("settings", {
 export type MealLog = typeof mealLogs.$inferSelect;
 export type MealItem = typeof mealItems.$inferSelect;
 export type Usual = typeof usuals.$inferSelect;
+
+// ---------- Body & goals ----------
+
+export const bodyWeights = sqliteTable(
+  "body_weights",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    loggedAt: integer("logged_at", { mode: "timestamp_ms" }).notNull(),
+    weight: real("weight").notNull(),
+  },
+  (t) => [index("body_weights_at_idx").on(t.loggedAt)],
+);
+
+/** Tape measurements in inches; `kind` is a MeasurementKey (waist, shoulders, …). */
+export const measurements = sqliteTable(
+  "measurements",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    loggedAt: integer("logged_at", { mode: "timestamp_ms" }).notNull(),
+    kind: text("kind").notNull(),
+    value: real("value").notNull(),
+  },
+  (t) => [index("measurements_kind_idx").on(t.kind, t.loggedAt)],
+);
+
+export const PHOTO_KINDS = ["progress", "inspiration"] as const;
+export const POSES = ["front", "side", "back"] as const;
+export type Pose = (typeof POSES)[number];
+
+/**
+ * Photos live in the database (resized in the browser to ~1440px JPEG) and
+ * are only served through the password-protected /photos route.
+ */
+export const photos = sqliteTable(
+  "photos",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    kind: text("kind", { enum: PHOTO_KINDS }).notNull(),
+    pose: text("pose").notNull().default(""),
+    takenAt: integer("taken_at", { mode: "timestamp_ms" }).notNull(),
+    mime: text("mime").notNull(),
+    width: integer("width").notNull().default(0),
+    height: integer("height").notNull().default(0),
+    data: blob("data", { mode: "buffer" }).notNull(),
+  },
+  (t) => [index("photos_kind_idx").on(t.kind, t.pose, t.takenAt)],
+);
+
+export const TARGET_GROUPS = ["physique", "strength"] as const;
+/**
+ * measurement: a tape measurement (key = MeasurementKey)
+ * ratio: shoulders ÷ waist (key = "shoulders/waist")
+ * lift: best estimated max, or most reps for bodyweight moves (key = exercise id)
+ */
+export const TARGET_KINDS = ["measurement", "ratio", "lift"] as const;
+
+export const goalTargets = sqliteTable("goal_targets", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  group: text("group", { enum: TARGET_GROUPS }).notNull(),
+  kind: text("kind", { enum: TARGET_KINDS }).notNull(),
+  key: text("key").notNull(),
+  label: text("label").notNull(),
+  /** Where you were when the goal was set; null means use the first recorded value. */
+  startValue: real("start_value"),
+  targetValue: real("target_value").notNull(),
+  position: integer("position").notNull().default(0),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`),
+});
+
+export type GoalTarget = typeof goalTargets.$inferSelect;

@@ -17,9 +17,17 @@ A personal food and gym log, in the "Paper Night" style. It's built for one pers
 - **Spending**: add what a meal cost, then see it per day, per week, and by restaurant.
 - Usuals: save a regular order once and log it again with one tap, price included. Lookups are saved too, so the same description never costs twice.
 
+**Goals**
+
+- First-run setup: current weight, height, age and activity lead to suggested calories and macros (Mifflin-St Jeor), then goal weight and pace, sodium, water, starter routines, and a physique goal. You can run it again from Settings.
+- Goal weight with a 7-day-average trend, the weekly rate, and a projected date. The chart shows a dashed line to the goal.
+- A physique goal: your inspiration photo plus numbers that track it (V-taper shoulders ÷ waist, waist, pull-ups, or any lift).
+- Progress photos (front / side / back) with a camera that overlays your last photo so you match the pose, plus side-by-side comparison. Photos are stored in your database and only served behind your login.
+- Measurements, and strength goals that use your best estimated max (or reps) from recent sessions.
+
 **Everywhere**
 
-- A calendar where you tap any day to see food, sodium, water, spend and workouts. A 7-day strip sits on Today.
+- A calendar where you tap any day to see food, sodium, water, spend, weigh-ins and workouts. A 7-day strip sits on Today.
 
 ## Run it locally
 
@@ -34,7 +42,7 @@ Without `APP_PASSWORD` set, local development is open. To try the login, put a p
 APP_PASSWORD=pick-something
 ```
 
-Other scripts: `npm test` (training, food and lookup logic), `npm run lint`, `npm run typecheck`, `npm run db:generate` (after changing `src/lib/db/schema.ts`).
+Other scripts: `npm test` (training, food, body and lookup logic), `npm run lint`, `npm run typecheck`, `npm run db:generate` (after changing `src/lib/db/schema.ts`).
 
 ## Deploy to Vercel
 

@@ -1,26 +1,20 @@
 import "server-only";
 import { and, asc, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import { db } from "./db";
-import { mealItems, mealLogs, settings, usuals, waterLogs, type MealLog } from "./db/schema";
+import { mealItems, mealLogs, usuals, waterLogs, type MealLog } from "./db/schema";
 import { addDays, dayKey, utcWindow } from "./dates";
+import { getSetting, setSetting } from "./settings";
 import { DEFAULT_GOALS, ZERO, addNutrients, type FoodItem, type Goals, type Nutrients } from "./nutrition";
 import type { UsualOption } from "./food-types";
 
 // ---------- Goals ----------
 
 export async function getGoals(): Promise<Goals> {
-  const [row] = await db.select().from(settings).where(eq(settings.key, "goals"));
-  if (!row) return DEFAULT_GOALS;
-  try {
-    return { ...DEFAULT_GOALS, ...(JSON.parse(row.value) as Partial<Goals>) };
-  } catch {
-    return DEFAULT_GOALS;
-  }
+  return { ...DEFAULT_GOALS, ...(await getSetting<Partial<Goals>>("goals", {})) };
 }
 
 export async function saveGoals(goals: Goals): Promise<void> {
-  const value = JSON.stringify(goals);
-  await db.insert(settings).values({ key: "goals", value }).onConflictDoUpdate({ target: settings.key, set: { value } });
+  await setSetting("goals", goals);
 }
 
 // ---------- Usuals ----------

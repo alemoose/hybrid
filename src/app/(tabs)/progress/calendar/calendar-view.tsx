@@ -13,6 +13,7 @@ export type CalendarDay = {
   future: boolean;
   isToday: boolean;
   workouts: { id: number; name: string; minutes: number; volume: number; sets: number }[];
+  weight: number | null;
   food: {
     calories: number;
     protein: number;
@@ -141,6 +142,16 @@ export function CalendarView({
           )}
           <span className="text-sm font-bold text-accent">Open</span>
         </Link>
+
+        {day.weight != null ? (
+          <Link href="/goals/weight" className="flex items-center gap-3 border-t border-line pt-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-p-green text-[11px] font-bold text-tile-ink">
+              LB
+            </span>
+            <span className="tabular flex-1 text-base font-bold">{day.weight.toFixed(1)} lb</span>
+            <span className="text-[13px] text-muted">weigh-in</span>
+          </Link>
+        ) : null}
 
         <div className="flex flex-col gap-3 border-t border-line pt-3">
           {day.workouts.length === 0 ? (
