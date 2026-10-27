@@ -79,6 +79,14 @@ export async function RecCard() {
   const weightRoom = shown.find((a) => areaRank(a.name) === 0);
   const crowded = weightRoom && !weightRoom.closed && busyLevel(weightRoom.pct) !== "quiet" && busyLevel(weightRoom.pct) != null;
   const note = crowded && reminders.notes.length ? pickReminder({ ...reminders, photoIds: [] }, `rec:${today}:${stamp?.hour ?? 0}`).note : null;
+  // Weight rooms at the other facilities (the Witt), as a fallback when the main one is packed.
+  const others = now.groups.slice(1).flatMap((g) => {
+    const room = g.areas.find((a) => areaRank(a.name) === 0);
+    return room ? [{ facility: g.facility, room }] : [];
+  });
+  const quieter = crowded
+    ? others.find((o) => !o.room.closed && o.room.pct != null && weightRoom.pct != null && o.room.pct <= weightRoom.pct - 15)
+    : undefined;
 
   return (
     <Card className="flex flex-col gap-3.5 p-4">
@@ -89,9 +97,20 @@ export async function RecCard() {
       {shown.map((a) => (
         <AreaRow key={a.id || a.name} area={a} today={today} />
       ))}
+      {others.length ? (
+        <div className="flex flex-col gap-3.5 border-t border-line pt-3.5">
+          {others.map((o) => (
+            <AreaRow key={o.room.id || o.room.name} area={{ ...o.room, name: withFacility(o.facility, o.room.name) }} today={today} />
+          ))}
+        </div>
+      ) : null}
       {crowded ? (
         <div className="flex flex-col gap-1 rounded-2xl bg-inner px-3.5 py-3">
-          <span className="text-[13px] font-semibold text-ink-2">Filling up. Headphones in, eyes on your plan.</span>
+          <span className="text-[13px] font-semibold text-ink-2">
+            {quieter
+              ? `Filling up. ${shortFacility(quieter.facility)} is quieter right now (${quieter.room.count} people).`
+              : "Filling up. Headphones in, eyes on your plan."}
+          </span>
           {note ? <span className="text-[13px] leading-snug text-rose">{note}</span> : null}
         </div>
       ) : null}
@@ -100,6 +119,18 @@ export async function RecCard() {
       </Link>
     </Card>
   );
+}
+
+/** "Witt Student Activity Center" → "Witt"; names without a clear short form stay as they are. */
+export function shortFacility(name: string): string {
+  const first = name.trim().split(/\s+/)[0] ?? "";
+  return /^(witt|aquatic)/i.test(first) ? first : name;
+}
+
+/** "Witt" + "Weight Room" → "Witt · Weight Room", but "Witt Weight Room" stays as it is. */
+function withFacility(facility: string, area: string): string {
+  const short = shortFacility(facility);
+  return area.toLowerCase().startsWith(short.toLowerCase()) ? area : `${short} · ${area}`;
 }
 
 export function RecCardSkeleton() {
