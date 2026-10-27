@@ -14,7 +14,8 @@ How to work:
 - They are in a calorie surplus unless told otherwise. Respect anything in their note (injuries, equipment, time).
 - "summary" is 2–3 sentences in plain words: the split and why it builds this physique.
 - "focus" lists the 3–5 things the program prioritizes, each a few words.
-- Each exercise "note" is optional and short (a cue or why it's there), or empty.
+- Each exercise "note" is optional: one short cue or why it's there, under 100 characters, or empty.
+- Don't give progression rules in notes. The app handles it: once every set hits the target reps, the next session adds weight.
 
 Call propose_program exactly once.`;
 
@@ -88,6 +89,16 @@ export type ProgramRequest = {
   library: { id: number; name: string; equipment: string; primaryMuscle: string }[];
 };
 
+/** Shortens at a word boundary with an ellipsis, so a long note never ends mid-word. */
+export function clip(text: string, max: number): string {
+  const t = text.trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max - 1);
+  // If the cut lands right at a word's end, keep that word.
+  const space = t[max - 1] === " " ? cut.length : cut.lastIndexOf(" ");
+  return `${(space > max * 0.6 ? cut.slice(0, space) : cut).replace(/[\s,;:.]+$/, "")}…`;
+}
+
 const clampInt = (v: unknown, min: number, max: number, fallback: number) => {
   const n = Math.round(Number(v));
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
@@ -109,7 +120,7 @@ export function cleanProgram(input: ProposeInput, library: ProgramRequest["libra
           sets: clampInt(e.sets, 1, 6, 3),
           reps: clampInt(e.reps, 3, 30, 10),
           restSeconds: clampInt(e.rest_seconds, 30, 300, 90),
-          note: String(e.note ?? "").slice(0, 120),
+          note: clip(String(e.note ?? ""), 160),
         },
       ];
     });

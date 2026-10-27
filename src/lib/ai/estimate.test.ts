@@ -181,3 +181,11 @@ describe("designProgram", () => {
     expect(sent).toContain("2 | Lateral Raise (Dumbbell) | dumbbell | shoulders");
   });
 });
+
+describe("clip", () => {
+  it("shortens at a word boundary", async () => {
+    const { clip } = await import("./program");
+    expect(clip("Pick a weight-stack leg press if the gym has one", 30)).toBe("Pick a weight-stack leg press…");
+    expect(clip("Short note", 30)).toBe("Short note");
+  });
+});
