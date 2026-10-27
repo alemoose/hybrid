@@ -93,6 +93,7 @@ export function FoodLogger({
   } | null>(null);
   const [items, setItems] = useState<DraftItem[]>([]);
   const [cooking, setCooking] = useState(true);
+  const [split, setSplit] = useState(false);
   const [price, setPrice] = useState("");
   const [looking, startLooking] = useTransition();
   const [saving, startSaving] = useTransition();
@@ -150,10 +151,12 @@ export function FoodLogger({
       });
       setItems(estimate.items.map((i) => ({ ...i, key: nextKey(), editing: false })));
       setCooking(estimate.source === "estimate");
+      setSplit(false);
     } else {
       setReview({ title: text.trim(), restaurant: "", source: "manual", note: "", url: "", range: null, cached: false });
       setItems([{ ...blankItem(), name: text.trim() }]);
       setCooking(false);
+      setSplit(false);
     }
   };
 
@@ -178,9 +181,11 @@ export function FoodLogger({
     });
   };
 
-  /** What actually gets saved for one row: restaurant cooking applied to estimates. */
+  const share = split ? 0.5 : 1;
+
+  /** What actually gets saved for one row: restaurant cooking applied to estimates, halved when split. */
   const finalItem = ({ name, quantity, unit, calories, protein, carbs, fat, sodium }: DraftItem): FoodItem => {
-    const item = { name: name.trim() || "Item", quantity, unit, calories, protein, carbs, fat, sodium };
+    const item = { name: name.trim() || "Item", quantity: quantity * share, unit, calories, protein, carbs, fat, sodium };
     return review?.source === "estimate" && cooking ? withRestaurantCooking(item) : item;
   };
   const finalItems = (): FoodItem[] => items.filter((i) => i.quantity > 0).map(finalItem);
@@ -201,7 +206,7 @@ export function FoodLogger({
           title: review.title.trim() || list[0].name,
           restaurant: review.restaurant.trim(),
           source: review.source,
-          priceCents: parseMoney(price),
+          priceCents: myCost(),
           items: list,
           saveAsUsual,
         });
@@ -210,6 +215,11 @@ export function FoodLogger({
         setError(e instanceof Error ? e.message : "Couldn't save. Try again.");
       }
     });
+  };
+
+  const myCost = (): number | null => {
+    const cents = parseMoney(price);
+    return cents == null ? null : Math.round(cents * share);
   };
 
   const patch = (key: string, p: Partial<DraftItem>) => setItems((list) => list.map((i) => (i.key === key ? { ...i, ...p } : i)));
@@ -296,7 +306,7 @@ export function FoodLogger({
                     <span className="text-[15px] font-bold wrap-break-word">{item.name || "New item"}</span>
                     <span className="tabular text-xs text-muted">
                       {shownItem
-                        ? `${formatNumber(shownItem.calories * shownItem.quantity)} kcal · P ${formatNumber(shownItem.protein * shownItem.quantity)} C ${formatNumber(shownItem.carbs * shownItem.quantity)} F ${formatNumber(shownItem.fat * shownItem.quantity)} · ${formatNumber(shownItem.sodium * shownItem.quantity)} mg sodium`
+                        ? `${split ? "Your half: " : ""}${formatNumber(shownItem.calories * shownItem.quantity)} kcal · P ${formatNumber(shownItem.protein * shownItem.quantity)} C ${formatNumber(shownItem.carbs * shownItem.quantity)} F ${formatNumber(shownItem.fat * shownItem.quantity)} · ${formatNumber(shownItem.sodium * shownItem.quantity)} mg sodium`
                         : "Removed"}
                     </span>
                   </button>
@@ -376,27 +386,20 @@ export function FoodLogger({
         </section>
 
         {review.source === "estimate" ? (
-          <button
-            type="button"
-            aria-pressed={cooking}
+          <Toggle
+            on={cooking}
             onClick={() => setCooking((c) => !c)}
-            className="flex items-center gap-3 rounded-[18px] border border-line bg-card px-4 py-3.5 text-left"
-          >
-            <span className="flex flex-1 flex-col gap-0.5">
-              <span className="text-[15px] font-bold">Restaurant cooking</span>
-              <span className="text-[13px] text-muted">Adds ~10% for the oil and butter you can&apos;t see</span>
-            </span>
-            <span
-              aria-hidden="true"
-              className={cx(
-                "flex h-[30px] w-[52px] shrink-0 items-center rounded-full p-[3px]",
-                cooking ? "justify-end bg-cobalt" : "justify-start bg-line-strong",
-              )}
-            >
-              <span className="size-6 rounded-full bg-white" />
-            </span>
-          </button>
+            title="Restaurant cooking"
+            detail="Adds ~10% for the oil and butter you can't see"
+          />
         ) : null}
+
+        <Toggle
+          on={split}
+          onClick={() => setSplit((v) => !v)}
+          title="Split it ½"
+          detail="Sharing? Logs half of everything, and half the cost"
+        />
 
         <section className="flex flex-col gap-3 rounded-3xl border border-line bg-card p-4">
           <div className="flex items-end justify-between gap-3">
@@ -407,7 +410,7 @@ export function FoodLogger({
               </span>
               {review.range ? (
                 <span className="text-[13px] text-muted">
-                  Likely {formatNumber(review.range[0])}–{formatNumber(review.range[1])}
+                  Likely {formatNumber(review.range[0] * share)}–{formatNumber(review.range[1] * share)}
                 </span>
               ) : null}
             </div>
@@ -422,7 +425,10 @@ export function FoodLogger({
             </span>
           </div>
           <label className="flex items-center justify-between border-t border-line pt-3">
-            <span className="text-[15px] font-semibold">What it cost</span>
+            <span className="flex flex-col gap-0.5">
+              <span className="text-[15px] font-semibold">{split ? "Total bill" : "What it cost"}</span>
+              {split && myCost() != null ? <span className="tabular text-[13px] text-muted">Your half: {formatMoney(myCost()!)}</span> : null}
+            </span>
             <span className="flex items-center gap-1 rounded-xl border border-line-strong bg-inner px-3">
               <span className="text-muted">$</span>
               <input
@@ -560,6 +566,28 @@ export function FoodLogger({
         ) : null}
       </div>
     </>
+  );
+}
+
+function Toggle({ on, onClick, title, detail }: { on: boolean; onClick: () => void; title: string; detail: string }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onClick}
+      className="flex items-center gap-3 rounded-[18px] border border-line bg-card px-4 py-3.5 text-left"
+    >
+      <span className="flex flex-1 flex-col gap-0.5">
+        <span className="text-[15px] font-bold">{title}</span>
+        <span className="text-[13px] text-muted">{detail}</span>
+      </span>
+      <span
+        aria-hidden="true"
+        className={cx("flex h-[30px] w-[52px] shrink-0 items-center rounded-full p-[3px]", on ? "justify-end bg-cobalt" : "justify-start bg-line-strong")}
+      >
+        <span className="size-6 rounded-full bg-white" />
+      </span>
+    </button>
   );
 }
 
