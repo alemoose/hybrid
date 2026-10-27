@@ -162,6 +162,7 @@ describe("designProgram", () => {
         targets: ["Shoulders ÷ waist: 1.42 now → 1.60"],
         lifts: [],
         routines: [],
+        preferences: ["Experience: new to lifting (under 6 months)."],
         about: "male, 20",
         daysPerWeek: 4,
         minutes: 60,
@@ -176,6 +177,7 @@ describe("designProgram", () => {
     const sent = JSON.stringify(bodies[0].messages);
     expect(sent).toContain('"type":"image"');
     expect(sent).toContain("Nightwing build");
+    expect(sent).toContain("Experience: new to lifting");
     expect(sent).toContain("2 | Lateral Raise (Dumbbell) | dumbbell | shoulders");
   });
 });

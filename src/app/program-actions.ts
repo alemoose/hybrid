@@ -14,18 +14,32 @@ import { getLiftTrends, listExerciseOptions, listRoutines } from "@/lib/queries"
 import { getBodyGoal, getPhysique, getProfile, setSetting } from "@/lib/settings";
 import { formatTargetValue } from "@/lib/target-view";
 import { getProgramDraft, type ProgramDraft } from "@/lib/program-queries";
+import { EQUIPMENT_CHOICES, EXPERIENCE, prefsForPrompt, type TrainingPrefs } from "@/lib/training-prefs";
 
 export type DesignResult = { ok: true; program: Program } | { ok: false; error: string };
 
 const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 /** Asks Claude for a program aimed at the physique goal, and keeps it as a draft to review. */
-export async function designMyProgram(input: { daysPerWeek: number; minutes: number; note: string }): Promise<DesignResult> {
+export async function designMyProgram(input: {
+  daysPerWeek: number;
+  minutes: number;
+  note: string;
+  prefs: TrainingPrefs;
+}): Promise<DesignResult> {
   await requireAuth();
   if (!aiConfigured()) return { ok: false, error: "Program design needs an ANTHROPIC_API_KEY." };
   const daysPerWeek = Math.min(6, Math.max(2, Math.round(Number(input.daysPerWeek) || 4)));
   const minutes = Math.min(120, Math.max(30, Math.round(Number(input.minutes) || 60)));
   const note = String(input.note ?? "").trim().slice(0, 300);
+  const allowed = new Set<string>(EQUIPMENT_CHOICES.map((c) => c.value));
+  const prefs: TrainingPrefs = {
+    experience: input.prefs?.experience in EXPERIENCE ? input.prefs.experience : "new",
+    equipment: (input.prefs?.equipment ?? []).filter((e) => allowed.has(e)),
+    gym: String(input.prefs?.gym ?? "").trim().slice(0, 800),
+  };
+  if (prefs.equipment.length === 0) return { ok: false, error: "Pick at least one kind of equipment." };
+  await setSetting("trainingPrefs", prefs);
 
   const now = Date.now();
   const [physique, targets, lifts, current, library, profile, bodyGoal, weight] = await Promise.all([
@@ -64,11 +78,12 @@ export async function designMyProgram(input: { daysPerWeek: number; minutes: num
           : `${l.name}: est. max ${Math.round(l.estMax)} lb, ${l.sessions} sessions in 90 days`,
       ),
       routines: current.map((r) => `${r.name}: ${r.exerciseNames.join(", ")}`),
+      preferences: prefsForPrompt(prefs),
       about: about || "not given",
       daysPerWeek,
       minutes,
       note,
-      library,
+      library: library.filter((e) => (prefs.equipment as string[]).includes(e.equipment)),
     });
     await setSetting("programDraft", { program, daysPerWeek, minutes, note, createdAt: now } satisfies ProgramDraft);
     revalidatePath("/gym/program");

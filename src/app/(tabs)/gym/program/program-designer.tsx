@@ -6,6 +6,7 @@ import { applyProgram, designMyProgram } from "@/app/program-actions";
 import { cx } from "@/components/ui";
 import type { Program } from "@/lib/ai/program";
 import type { ProgramDraft } from "@/lib/program-queries";
+import { EQUIPMENT_CHOICES, EXPERIENCE, SRC_GYM, type Experience, type TrainingPrefs } from "@/lib/training-prefs";
 
 const DAYS = [3, 4, 5, 6];
 const MINUTES = [45, 60, 75, 90];
@@ -21,8 +22,11 @@ export function ProgramDesigner({
   hasGoal: boolean;
   photoId: number | null;
   draft: ProgramDraft | null;
-  defaults: { daysPerWeek: number; minutes: number; note: string };
+  defaults: { daysPerWeek: number; minutes: number; note: string; prefs: TrainingPrefs };
 }) {
+  const [experience, setExperience] = useState<Experience>(defaults.prefs.experience);
+  const [equipment, setEquipment] = useState(defaults.prefs.equipment);
+  const [gym, setGym] = useState(defaults.prefs.gym);
   const [days, setDays] = useState(defaults.daysPerWeek);
   const [minutes, setMinutes] = useState(defaults.minutes);
   const [note, setNote] = useState(defaults.note);
@@ -34,7 +38,7 @@ export function ProgramDesigner({
   const design = () =>
     startDesign(async () => {
       setError(null);
-      const res = await designMyProgram({ daysPerWeek: days, minutes, note });
+      const res = await designMyProgram({ daysPerWeek: days, minutes, note, prefs: { experience, equipment, gym } });
       if (res.ok) setProgram(res.program);
       else setError(res.error);
     });
@@ -59,6 +63,64 @@ export function ProgramDesigner({
       </section>
 
       <section className="flex flex-col gap-3 rounded-3xl border border-line bg-card p-4">
+        <div className="flex flex-col gap-2">
+          <span className="text-[15px] font-semibold">Experience</span>
+          <div role="group" aria-label="Experience" className="grid grid-cols-3 gap-1.5">
+            {(Object.keys(EXPERIENCE) as Experience[]).map((k) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={experience === k}
+                onClick={() => setExperience(k)}
+                className={cx(
+                  "flex flex-col items-center rounded-2xl border px-2 py-2 leading-tight",
+                  experience === k ? "border-ink bg-ink text-dark" : "border-line-strong bg-inner",
+                )}
+              >
+                <span className="text-sm font-bold">{EXPERIENCE[k].label}</span>
+                <span className={cx("text-[11px]", experience === k ? "text-dark/70" : "text-muted")}>{EXPERIENCE[k].detail}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-[15px] font-semibold">Equipment I&apos;m comfortable with</span>
+          <div role="group" aria-label="Equipment" className="flex flex-wrap gap-1.5">
+            {EQUIPMENT_CHOICES.map((c) => {
+              const on = equipment.includes(c.value);
+              return (
+                <button
+                  key={c.value}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setEquipment(on ? equipment.filter((e) => e !== c.value) : [...equipment, c.value])}
+                  className="chip h-9 px-3"
+                >
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
+          <span className="text-xs text-muted">Turn off anything you&apos;d rather skip for now. You can add it back later.</span>
+        </div>
+        <details className="group rounded-xl bg-inner px-3 py-2.5">
+          <summary className="flex cursor-pointer list-none items-center justify-between text-[13px] font-semibold">
+            <span className="min-w-0 truncate">Gym: {gym.trim() ? gym.split(/[.(]/)[0].trim() : "not set"}</span>
+            <span className="shrink-0 pl-2 text-accent group-open:hidden">Edit</span>
+          </summary>
+          <textarea
+            value={gym}
+            onChange={(e) => setGym(e.target.value)}
+            rows={5}
+            aria-label="Your gym's equipment"
+            className="mt-2 w-full resize-none rounded-lg border border-line-strong bg-card px-2.5 py-2 text-[13px] leading-relaxed outline-none"
+          />
+          {gym !== SRC_GYM ? (
+            <button type="button" onClick={() => setGym(SRC_GYM)} className="pt-1 text-xs font-semibold text-accent">
+              Reset to the UA Student Rec Center
+            </button>
+          ) : null}
+        </details>
         <Choice label="Days a week" options={DAYS} value={days} onChange={setDays} />
         <Choice label="Minutes a session" options={MINUTES} value={minutes} onChange={setMinutes} />
         <input

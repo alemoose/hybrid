@@ -8,7 +8,8 @@ How to work:
 - Study their goal: the inspiration photo (if any), its name and description, and the numbers they track. Work out which muscles make that look (for example a V-taper needs wide lats, round side and rear delts, and a tight waist) and give those more weekly sets, while keeping the whole body trained.
 - Fit the program to the days per week and session length they give. Name each day plainly ("Upper A", "Pull + delts").
 - Use ONLY exercises from the provided library, by exercise_id. Prefer what they already do when it fits, so their history carries over.
-- 4–7 exercises a day. Big compound lifts first with 2–3 minutes rest; isolation work later with 60–90 seconds. Reps: 5–8 for heavy compounds, 8–12 for most work, 12–20 for delts, calves, abs and arms.
+- Their experience level and equipment comfort come first: a program they'll actually do beats a perfect one.
+- 4–7 exercises a day unless their experience says otherwise. Big compound lifts first with 2–3 minutes rest; isolation work later with 60–90 seconds. Reps: 5–8 for heavy compounds, 8–12 for most work, 12–20 for delts, calves, abs and arms.
 - Most muscles should get 10–20 hard sets a week; priority muscles toward the top of that range.
 - They are in a calorie surplus unless told otherwise. Respect anything in their note (injuries, equipment, time).
 - "summary" is 2–3 sentences in plain words: the split and why it builds this physique.
@@ -78,6 +79,8 @@ export type ProgramRequest = {
   lifts: string[];
   /** Lines like "Push Day: Bench Press (Barbell), Overhead Press (Barbell), …". */
   routines: string[];
+  /** Experience, equipment comfort and the gym (see training-prefs). */
+  preferences: string[];
   about: string;
   daysPerWeek: number;
   minutes: number;
@@ -127,6 +130,7 @@ export async function designProgram(req: ProgramRequest, client: Anthropic = new
     `About me: ${req.about}`,
     req.lifts.length ? `My recent lifts:\n${req.lifts.join("\n")}` : "I haven't logged lifts in the app yet.",
     req.routines.length ? `My current routines:\n${req.routines.join("\n")}` : "",
+    req.preferences.join("\n"),
     `I can train ${req.daysPerWeek} days a week, about ${req.minutes} minutes a session.`,
     req.note ? `Also: ${req.note}` : "",
     `Exercise library (id | name | equipment | primary muscle):\n${req.library.map((e) => `${e.id} | ${e.name} | ${e.equipment} | ${e.primaryMuscle}`).join("\n")}`,
