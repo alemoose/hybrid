@@ -18,11 +18,12 @@ export function TabBar() {
   return (
     <nav
       aria-label="Main"
-      // The ::after strip carries the bar's color below it. iOS home-screen apps can leave the
-      // bar floating above the bottom edge (after the keyboard closes); this keeps that gap filled.
-      className="pb-safe fixed inset-x-0 bottom-0 z-20 border-t border-line bg-nav after:absolute after:inset-x-0 after:top-full after:h-40 after:bg-nav"
+      // The home indicator only needs part of the safe area, so the bar tucks into it like a
+      // native tab bar. The ::after strip carries the bar's color below it: iOS home-screen apps
+      // can leave the bar floating above the bottom edge (after the keyboard closes).
+      className="pb-[max(calc(env(safe-area-inset-bottom)-12px),4px)] fixed inset-x-0 bottom-0 z-20 border-t border-line bg-nav after:absolute after:inset-x-0 after:top-full after:h-40 after:bg-nav"
     >
-      <div className="mx-auto flex h-[72px] max-w-md items-start justify-around px-2.5 pt-2">
+      <div className="mx-auto flex h-[62px] max-w-md items-start justify-around px-2.5 pt-1.5">
         {tabs.map((tab) =>
           tab ? (
             <Link
