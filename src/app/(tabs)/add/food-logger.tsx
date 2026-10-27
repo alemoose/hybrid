@@ -529,7 +529,7 @@ export function FoodLogger({
           <h2 className="px-1 text-xs font-bold tracking-[0.08em] text-muted uppercase">Your usuals · tap to log</h2>
           <div className="flex flex-wrap gap-2">
             {usuals.map((u) => (
-              <button key={u.id} type="button" disabled={saving} onClick={() => quickLog(u)} className="chip h-auto flex-col items-start rounded-2xl py-2 text-left">
+              <button key={u.id} type="button" disabled={saving} onClick={() => quickLog(u)} className="chip h-auto max-w-full flex-col items-start rounded-2xl py-2 text-left whitespace-normal">
                 <span className="text-[11px] font-semibold text-muted">{u.restaurant || "Usual"}</span>
                 <span>
                   {u.title} <span className="font-medium text-muted">· {formatNumber(u.calories)}</span>

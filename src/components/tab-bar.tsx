@@ -18,7 +18,9 @@ export function TabBar() {
   return (
     <nav
       aria-label="Main"
-      className="pb-safe fixed inset-x-0 bottom-0 z-20 border-t border-line bg-nav"
+      // The ::after strip carries the bar's color below it. iOS home-screen apps can leave the
+      // bar floating above the bottom edge (after the keyboard closes); this keeps that gap filled.
+      className="pb-safe fixed inset-x-0 bottom-0 z-20 border-t border-line bg-nav after:absolute after:inset-x-0 after:top-full after:h-40 after:bg-nav"
     >
       <div className="mx-auto flex h-[72px] max-w-md items-start justify-around px-2.5 pt-2">
         {tabs.map((tab) =>
