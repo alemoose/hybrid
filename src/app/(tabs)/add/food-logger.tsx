@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, useSyncExternalStore, useTransition } from "react";
+import { useLayoutEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { estimateFood, logMeal, logUsual } from "@/app/food-actions";
 import { CloseIcon, ForkIcon } from "@/components/icons";
 import { Pill, cx, type PillTone } from "@/components/ui";
@@ -245,16 +245,14 @@ export function FoodLogger({
     return (
       <>
         <section className="flex flex-col gap-3 rounded-3xl border border-line bg-card p-4">
-          <div className="flex items-start justify-between gap-3">
-            <label className="flex min-w-0 flex-1 flex-col gap-1">
-              <span className="text-[13px] font-semibold text-muted">Meal name</span>
-              <input
-                value={review.title}
-                onChange={(e) => setReview({ ...review, title: e.target.value })}
-                className="bg-transparent font-display text-[22px] leading-tight font-semibold outline-none"
-              />
-            </label>
-            <Pill tone={s.tone}>{s.text}</Pill>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor="meal-title" className="text-[13px] font-semibold text-muted">
+                Meal name
+              </label>
+              <Pill tone={s.tone}>{s.text}</Pill>
+            </div>
+            <GrowingTitle id="meal-title" value={review.title} onChange={(title) => setReview({ ...review, title })} />
           </div>
           <label className="flex items-center gap-3 border-t border-line pt-3">
             <span className="w-24 text-[13px] font-semibold text-muted">Restaurant</span>
@@ -295,7 +293,7 @@ export function FoodLogger({
                     className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
                     aria-expanded={item.editing}
                   >
-                    <span className="truncate text-[15px] font-bold">{item.name || "New item"}</span>
+                    <span className="text-[15px] font-bold wrap-break-word">{item.name || "New item"}</span>
                     <span className="tabular text-xs text-muted">
                       {shownItem
                         ? `${formatNumber(shownItem.calories * shownItem.quantity)} kcal · P ${formatNumber(shownItem.protein * shownItem.quantity)} C ${formatNumber(shownItem.carbs * shownItem.quantity)} F ${formatNumber(shownItem.fat * shownItem.quantity)} · ${formatNumber(shownItem.sodium * shownItem.quantity)} mg sodium`
@@ -604,5 +602,30 @@ function MicGlyph() {
       <rect x="9" y="3" width="6" height="11" rx="3" />
       <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
     </svg>
+  );
+}
+
+/** A one-line title field that wraps onto more lines instead of cutting long names off. */
+function GrowingTitle({ id, value, onChange }: { id: string; value: string; onChange: (value: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+  return (
+    <textarea
+      ref={ref}
+      id={id}
+      rows={1}
+      value={value}
+      onChange={(e) => onChange(e.target.value.replace(/\s*\n\s*/g, " "))}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.preventDefault();
+      }}
+      enterKeyHint="done"
+      className="resize-none overflow-hidden bg-transparent font-display text-[22px] leading-tight font-semibold outline-none"
+    />
   );
 }

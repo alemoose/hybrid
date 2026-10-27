@@ -52,7 +52,7 @@ export function PageHeader({
       ) : null}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         {eyebrow ? <span className="text-sm font-semibold text-muted">{eyebrow}</span> : null}
-        <h1 className="line-clamp-2 font-display text-[26px] leading-tight font-semibold tracking-[-0.6px] text-balance">{title}</h1>
+        <h1 className="font-display text-[26px] leading-tight font-semibold tracking-[-0.6px] text-balance">{title}</h1>
       </div>
       {right}
     </header>

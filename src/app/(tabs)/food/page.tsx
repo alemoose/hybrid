@@ -82,7 +82,7 @@ export default async function FoodPage({ searchParams }: PageProps<"/food">) {
                   {(l.restaurant || l.title).charAt(0).toUpperCase()}
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="truncate text-[15px] font-semibold">{l.title}</span>
+                  <span className="text-[15px] font-semibold wrap-break-word">{l.title}</span>
                   <span className="truncate text-[13px] text-muted">
                     {[l.restaurant, formatInstant(l.eatenAt, tz, { hour: "numeric", minute: "2-digit" }), l.source === "estimate" ? "estimate" : null]
                       .filter(Boolean)
