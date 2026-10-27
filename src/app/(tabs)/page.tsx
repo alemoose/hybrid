@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createStarterRoutines } from "@/app/actions";
 import { dismissCheckin } from "@/app/checkin-actions";
 import { formatRate, paceText, verdict } from "@/components/checkin-verdict";
+import { CreatineCard } from "@/components/creatine-card";
 import { NutritionCard } from "@/components/nutrition-card";
 import { ReminderCard } from "@/components/reminder-card";
 import { ResumeBanner } from "@/components/resume-banner";
@@ -16,6 +17,8 @@ import { getDayContext } from "@/lib/day-context";
 import { foodByDay } from "@/lib/food-queries";
 import { changeTone, daysSinceText, formatNumber } from "@/lib/format";
 import { calorieStatus } from "@/lib/nutrition";
+import { habitHistory } from "@/lib/habit-queries";
+import { streak } from "@/lib/habits";
 import { getReminders } from "@/lib/reminder-queries";
 import { hasReminders, pickReminder, showsOnToday } from "@/lib/reminders";
 import { isOnboarded } from "@/lib/settings";
@@ -25,7 +28,7 @@ export default async function TodayPage() {
   const [tz, onboarded] = await Promise.all([getTimeZone(), isOnboarded()]);
   if (!onboarded) redirect("/welcome");
   const today = todayKey(tz);
-  const [upNext, week, recent, ctx, weekFood, checkin, reminders] = await Promise.all([
+  const [upNext, week, recent, ctx, weekFood, checkin, reminders, creatine] = await Promise.all([
     getUpNext(tz),
     lastSevenDays(tz),
     recentWorkouts(3),
@@ -33,6 +36,7 @@ export default async function TodayPage() {
     foodByDay(addDays(today, -6), today, tz),
     getCheckin(tz),
     getReminders(),
+    habitHistory("creatine", today),
   ]);
   const reminder = hasReminders(reminders) && showsOnToday(today) ? pickReminder(reminders, today) : null;
   const strip = week.map((d) => ({
@@ -86,6 +90,11 @@ export default async function TodayPage() {
         actions={{ logHref: "/add?mode=food", secondary: { href: "/food", label: "Food log" }, suggest: true }}
       />
       <WaterCard ounces={ctx.food.summary.water} goal={ctx.water.goal} why={ctx.water.why} />
+      <CreatineCard
+        done={creatine.has(today)}
+        streak={streak(creatine, today)}
+        week={week.map((d) => ({ key: d.key, label: formatDayKey(d.key, { weekday: "narrow" }), done: creatine.has(d.key) }))}
+      />
       {reminder ? <ReminderCard label={reminders.name ? `Why ${reminders.name}` : "Remember"} {...reminder} /> : null}
 
       {upNext ? (

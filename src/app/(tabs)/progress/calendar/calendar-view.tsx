@@ -14,6 +14,7 @@ export type CalendarDay = {
   isToday: boolean;
   workouts: { id: number; name: string; minutes: number; volume: number; sets: number }[];
   weight: number | null;
+  creatine: boolean;
   food: {
     calories: number;
     protein: number;
@@ -142,6 +143,21 @@ export function CalendarView({
           )}
           <span className="text-sm font-bold text-accent">Open</span>
         </Link>
+
+        {!day.future ? (
+          <div className="flex items-center gap-3 border-t border-line pt-3">
+            <span
+              className={cx(
+                "flex size-10 shrink-0 items-center justify-center rounded-xl text-[11px] font-bold",
+                day.creatine ? "bg-p-green text-tile-ink" : "border border-line-strong text-muted",
+              )}
+            >
+              Cr
+            </span>
+            <span className="flex-1 text-base font-bold">{day.creatine ? "Creatine taken" : "No creatine logged"}</span>
+            <span className="text-[13px] text-muted">5 g</span>
+          </div>
+        ) : null}
 
         {day.weight != null ? (
           <Link href="/goals/weight" className="flex items-center gap-3 border-t border-line pt-3">

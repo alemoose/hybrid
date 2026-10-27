@@ -14,6 +14,7 @@ A personal food and gym log, in the "Paper Night" style. It's built for one pers
 
 - Type, say or photograph what you ate. Claude looks up a chain's official nutrition with web search, reads labels from photos, and estimates local spots. Every item can be edited before you log it.
 - Calories, protein, carbs, fat and **sodium** against your goals. The sodium target rises a little on training days.
+- A daily **creatine** check (5 g) on Today with a streak and the last 7 days, also shown on the calendar.
 - A **water** goal from body weight, plus extra for training and after a salty day, with one-tap +8 / +16.9 / +32 oz.
 - **Spending**: add what a meal cost, then see it per day, per week, and by restaurant.
 - Usuals: save a regular order once and log it again with one tap, price included. Lookups are saved too, so the same description never costs twice.

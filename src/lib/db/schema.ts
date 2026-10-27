@@ -277,3 +277,22 @@ export const recSamples = sqliteTable(
   },
   (t) => [uniqueIndex("rec_samples_update_idx").on(t.locationId, t.updated)],
 );
+
+// ---------- Daily habits ----------
+
+export const HABITS = ["creatine"] as const;
+export type Habit = (typeof HABITS)[number];
+
+/** One row per habit per local day it was done ("2026-10-27"). */
+export const habitLogs = sqliteTable(
+  "habit_logs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    habit: text("habit", { enum: HABITS }).notNull(),
+    day: text("day").notNull(),
+    loggedAt: integer("logged_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => [uniqueIndex("habit_logs_day_idx").on(t.habit, t.day)],
+);
