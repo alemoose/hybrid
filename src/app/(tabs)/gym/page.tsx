@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { createStarterRoutines, moveRoutine } from "@/app/actions";
 import { DownIcon, UpIcon } from "@/components/icons";
+import { RecCard, RecCardSkeleton } from "@/components/rec-card";
 import { ResumeBanner } from "@/components/resume-banner";
 import { Card, DateTile, PageHeader, SectionLabel, SectionTitle } from "@/components/ui";
 import { getTimeZone } from "@/lib/auth";
@@ -16,6 +18,9 @@ export default async function GymPage() {
     <>
       <PageHeader eyebrow="Train" title="Gym" />
       <ResumeBanner />
+      <Suspense fallback={<RecCardSkeleton />}>
+        <RecCard />
+      </Suspense>
 
       <Link href="/workout?empty=1" className="btn-outline h-14 justify-start rounded-2xl px-4 text-base">
         <span className="text-xl text-accent">+</span> Start empty workout

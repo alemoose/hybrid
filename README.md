@@ -7,6 +7,7 @@ A personal food and gym log, in the "Paper Night" style. It's built for one pers
 - Routines that run in order (Push → Pull → Legs → …). Today shows which one is next, with your targets.
 - A live workout screen with a Previous column, warm-up, drop and failure sets, a rest timer that chimes, and the screen kept awake. The workout in progress is saved on the phone, so a reload never loses it.
 - Next-session targets. Hit every rep and the next workout adds weight. Miss reps and it keeps the weight and adds a rep. Three stalled sessions in a row suggests a 10% deload.
+- Rec center live counts on the Gym tab (University of Alabama UREC, through its Connect2Concepts feed), plus the usual quiet hours, built from the counts the app has seen. If the feed can't be found automatically, paste the live-counts page link in Settings.
 - A progress chart for every exercise (estimated max, heaviest, best set, volume), plus personal records and history.
 
 **Food, sodium, water, spending**

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { blob, index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { blob, index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const exercises = sqliteTable("exercises", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -256,3 +256,23 @@ export const goalTargets = sqliteTable("goal_targets", {
 });
 
 export type GoalTarget = typeof goalTargets.$inferSelect;
+
+// ---------- Rec center ----------
+
+/** Counts seen from the rec center feed, one row per area per feed update, for "usually quiet" hours. */
+export const recSamples = sqliteTable(
+  "rec_samples",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    locationId: integer("location_id").notNull(),
+    location: text("location").notNull(),
+    count: integer("count").notNull(),
+    capacity: integer("capacity").notNull(),
+    /** The feed's timestamp, rec center local time. */
+    updated: text("updated").notNull(),
+    recordedAt: integer("recorded_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => [uniqueIndex("rec_samples_update_idx").on(t.locationId, t.updated)],
+);
