@@ -273,7 +273,7 @@ export default function ActiveWorkout(props: Props) {
   };
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-3.5 px-[18px] pt-[max(calc(env(safe-area-inset-top)+12px),16px)] pb-[max(env(safe-area-inset-bottom),32px)]">
+    <main className="mx-auto flex max-w-md flex-col gap-3.5 px-[18px] pt-[max(calc(env(safe-area-inset-top)+28px),16px)] pb-[max(env(safe-area-inset-bottom),32px)]">
       <header className="sticky top-[env(safe-area-inset-top)] z-10 -mx-[18px] flex items-center gap-3 bg-bg/95 px-[18px] pt-1 pb-2 backdrop-blur">
         <Link href="/" aria-label="Minimize workout" className="circle-btn">
           <DownIcon size={18} />

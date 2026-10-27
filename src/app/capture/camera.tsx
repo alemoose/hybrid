@@ -135,7 +135,7 @@ export function Camera({ pose, ghostId }: { pose: string; ghostId: number | null
           </>
         )}
 
-        <div className="absolute inset-x-0 top-0 flex items-center gap-3 bg-gradient-to-b from-black/70 to-transparent px-4 pt-[max(calc(env(safe-area-inset-top)+12px),16px)] pb-6">
+        <div className="absolute inset-x-0 top-0 flex items-center gap-3 bg-gradient-to-b from-black/70 to-transparent px-4 pt-[max(calc(env(safe-area-inset-top)+28px),16px)] pb-6">
           <Link href="/goals" aria-label="Close camera" className="circle-btn border-white/20 bg-black/40">
             <CloseIcon size={18} />
           </Link>
