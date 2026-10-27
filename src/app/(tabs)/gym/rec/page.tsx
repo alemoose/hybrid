@@ -1,8 +1,8 @@
-import { AreaRow, BUSY, updatedText } from "@/components/rec-card";
+import { AreaRow, BUSY, HoursLine, updatedText } from "@/components/rec-card";
 import { Card, EmptyState, PageHeader, SectionLabel, TextLink, cx } from "@/components/ui";
 import { getTimeZone } from "@/lib/auth";
-import { todayKey } from "@/lib/dates";
-import { areaRank, busyLevel, formatHour, hourlyPattern, quietestHours, type Sample } from "@/lib/rec";
+import { requestTime, todayKey } from "@/lib/dates";
+import { areaRank, buildingHours, busyLevel, formatHour, hourlyPattern, quietestHours, recClock, type Sample } from "@/lib/rec";
 import { getRecNow, samplesFor } from "@/lib/rec-queries";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +42,10 @@ export default async function RecPage() {
         <section key={g.facility || "areas"} className="flex flex-col gap-2">
           <SectionLabel>{g.facility || "Areas"}</SectionLabel>
           <Card className="flex flex-col gap-3.5 p-4">
+            {(() => {
+              const hours = buildingHours(g.facility, recClock(requestTime()));
+              return hours ? <HoursLine hours={hours} /> : null;
+            })()}
             {g.areas.map((a) => (
               <AreaRow key={a.id || a.name} area={a} today={today} />
             ))}

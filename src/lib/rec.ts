@@ -153,3 +153,69 @@ export function quietestHours(pattern: (number | null)[], span = 2): { from: num
   }
   return best;
 }
+
+// ---------- Hours ----------
+
+/** Minutes after midnight, [open, close], Sunday first. From UREC's hours page (regular semester hours). */
+type Week = [number, number][];
+const h = (hour: number, minute = 0) => hour * 60 + minute;
+
+export const BUILDINGS: { key: "src" | "witt"; name: string; match: RegExp; week: Week }[] = [
+  {
+    key: "src",
+    name: "SRC",
+    match: /recreation|\bsrc\b/i,
+    week: [
+      [h(10), h(22)],
+      [h(5, 30), h(23)],
+      [h(5, 30), h(23)],
+      [h(5, 30), h(23)],
+      [h(5, 30), h(23)],
+      [h(5, 30), h(20)],
+      [h(9), h(19)],
+    ],
+  },
+  {
+    key: "witt",
+    name: "Witt",
+    match: /witt/i,
+    week: [
+      [h(10), h(22)],
+      [h(7), h(23)],
+      [h(7), h(23)],
+      [h(7), h(23)],
+      [h(7), h(23)],
+      [h(7), h(20)],
+      [h(11), h(17)],
+    ],
+  },
+];
+
+export const REC_TIME_ZONE = "America/Chicago";
+export const SCHEDULE_CHANGES_URL = "https://urec.sl.ua.edu/posts/category/schedule-changes/";
+
+/** Weekday (0 = Sunday) and minutes after midnight at the rec center. */
+export function recClock(now: number): { weekday: number; minutes: number } {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: REC_TIME_ZONE, weekday: "short", hour: "numeric", minute: "numeric", hourCycle: "h23" }).formatToParts(now);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  const weekday = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(get("weekday"));
+  return { weekday, minutes: Number(get("hour")) * 60 + Number(get("minute")) };
+}
+
+const clockText = (m: number) => formatHour(Math.floor(m / 60) % 24, m % 60 === 0 ? undefined : m % 60);
+
+export type BuildingHours = { name: string; today: string; status: string; open: boolean };
+
+/** Today's hours and whether it's open now, e.g. "Open until 11 PM" or "Opens at 9 AM". */
+export function buildingHours(facility: string, clock: { weekday: number; minutes: number }): BuildingHours | null {
+  const b = BUILDINGS.find((x) => x.match.test(facility));
+  if (!b) return null;
+  const [open, close] = b.week[clock.weekday];
+  const today = `${clockText(open)} – ${clockText(close)}`;
+  if (clock.minutes < open) return { name: b.name, today, status: `Opens at ${clockText(open)}`, open: false };
+  if (clock.minutes >= close) {
+    const [nextOpen] = b.week[(clock.weekday + 1) % 7];
+    return { name: b.name, today, status: `Closed · opens ${clockText(nextOpen)} tomorrow`, open: false };
+  }
+  return { name: b.name, today, status: close - clock.minutes <= 60 ? `Closes soon · ${clockText(close)}` : `Open until ${clockText(close)}`, open: true };
+}

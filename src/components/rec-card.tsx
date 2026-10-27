@@ -1,7 +1,18 @@
 import Link from "next/link";
 import { getTimeZone } from "@/lib/auth";
-import { todayKey } from "@/lib/dates";
-import { areaRank, busyLevel, formatHour, parseFeedTime, type Busy, type RecArea } from "@/lib/rec";
+import { requestTime, todayKey } from "@/lib/dates";
+import {
+  SCHEDULE_CHANGES_URL,
+  areaRank,
+  buildingHours,
+  busyLevel,
+  formatHour,
+  parseFeedTime,
+  recClock,
+  type BuildingHours,
+  type Busy,
+  type RecArea,
+} from "@/lib/rec";
 import { getRecNow } from "@/lib/rec-queries";
 import { getReminders } from "@/lib/reminder-queries";
 import { pickReminder } from "@/lib/reminders";
@@ -84,8 +95,17 @@ export async function RecCard() {
     const room = g.areas.find((a) => areaRank(a.name) === 0);
     return room ? [{ facility: g.facility, room }] : [];
   });
+  const clock = recClock(requestTime());
+  const mainHours = buildingHours(main.facility, clock);
   const quieter = crowded
-    ? others.find((o) => !o.room.closed && o.room.pct != null && weightRoom.pct != null && o.room.pct <= weightRoom.pct - 15)
+    ? others.find(
+        (o) =>
+          !o.room.closed &&
+          buildingHours(o.facility, clock)?.open !== false &&
+          o.room.pct != null &&
+          weightRoom.pct != null &&
+          o.room.pct <= weightRoom.pct - 15,
+      )
     : undefined;
 
   return (
@@ -94,30 +114,50 @@ export async function RecCard() {
         <span className="text-[15px] font-bold">Rec center now</span>
         {stamp ? <span className="text-xs text-muted">Updated {formatHour(stamp.hour, stamp.minute)}</span> : null}
       </div>
+      {mainHours ? <HoursLine hours={mainHours} /> : null}
       {shown.map((a) => (
         <AreaRow key={a.id || a.name} area={a} today={today} />
       ))}
-      {others.length ? (
-        <div className="flex flex-col gap-3.5 border-t border-line pt-3.5">
-          {others.map((o) => (
-            <AreaRow key={o.room.id || o.room.name} area={{ ...o.room, name: withFacility(o.facility, o.room.name) }} today={today} />
-          ))}
+      {others.map((o) => {
+        const hours = buildingHours(o.facility, clock);
+        return (
+          <div key={o.room.id || o.room.name} className="flex flex-col gap-2.5 border-t border-line pt-3.5">
+            {hours ? <HoursLine hours={hours} /> : null}
+            <AreaRow area={{ ...o.room, name: withFacility(o.facility, o.room.name) }} today={today} />
+          </div>
+        );
+      })}
+      {quieter ? (
+        <div className="rounded-2xl bg-inner px-3.5 py-3 text-[13px] font-semibold text-good">
+          {withFacility(quieter.facility, quieter.room.name)} is quieter right now: {quieter.room.count} people.
         </div>
       ) : null}
       {crowded ? (
         <div className="flex flex-col gap-1 rounded-2xl bg-inner px-3.5 py-3">
-          <span className="text-[13px] font-semibold text-ink-2">
-            {quieter
-              ? `Filling up. ${shortFacility(quieter.facility)} is quieter right now (${quieter.room.count} people).`
-              : "Filling up. Headphones in, eyes on your plan."}
-          </span>
+          <span className="text-[13px] font-semibold text-ink-2">Filling up. Headphones in, eyes on your plan.</span>
           {note ? <span className="text-[13px] leading-snug text-rose">{note}</span> : null}
         </div>
       ) : null}
-      <Link href="/gym/rec" className="border-t border-line pt-3 text-sm font-semibold text-accent">
-        Every area and usual quiet times
-      </Link>
+      <div className="flex items-baseline justify-between gap-3 border-t border-line pt-3">
+        <Link href="/gym/rec" className="text-sm font-semibold text-accent">
+          Every area and usual quiet times
+        </Link>
+        <a href={SCHEDULE_CHANGES_URL} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-muted">
+          Schedule changes ↗
+        </a>
+      </div>
     </Card>
+  );
+}
+
+/** "SRC · Open until 11 PM · 5:30 AM – 11 PM", from the regular schedule. */
+export function HoursLine({ hours }: { hours: BuildingHours }) {
+  return (
+    <div className="-mb-1 flex flex-wrap items-baseline gap-x-1.5 text-xs">
+      <span className="font-bold tracking-[0.06em] text-muted uppercase">{hours.name}</span>
+      <span className={cx("font-semibold", hours.open ? "text-good" : "text-warn")}>{hours.status}</span>
+      <span className="text-faint">· {hours.today}</span>
+    </div>
   );
 }
 

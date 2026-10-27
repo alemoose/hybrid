@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { busyLevel, countLinks, findFeedKey, groupByFacility, hourlyPattern, parseCounts, parseFeedTime, quietestHours } from "./rec";
+import { buildingHours, busyLevel, countLinks, findFeedKey, groupByFacility, hourlyPattern, parseCounts, parseFeedTime, quietestHours, recClock } from "./rec";
 
 const KEY = "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
 
@@ -76,5 +76,29 @@ describe("usual busyness", () => {
   it("finds the quietest stretch with data", () => {
     expect(quietestHours(hourlyPattern(samples, false))).toEqual({ from: 6, to: 8, pct: 15 });
     expect(quietestHours(Array(24).fill(null))).toBeNull();
+  });
+});
+
+describe("building hours", () => {
+  it("knows the SRC and Witt schedules", () => {
+    // Monday 3:19 PM
+    expect(buildingHours("Student Recreation Center", { weekday: 1, minutes: 15 * 60 + 19 })).toEqual({
+      name: "SRC",
+      today: "5:30 AM – 11 PM",
+      status: "Open until 11 PM",
+      open: true,
+    });
+    // Saturday 4:30 PM: Witt closes at 5
+    expect(buildingHours("Witt Student Activity Center", { weekday: 6, minutes: 16 * 60 + 30 })?.status).toBe("Closes soon · 5 PM");
+    // Saturday 8 AM: SRC opens at 9
+    expect(buildingHours("Student Recreation Center", { weekday: 6, minutes: 8 * 60 })).toMatchObject({ status: "Opens at 9 AM", open: false });
+    // Friday 9 PM: SRC closed, opens Saturday at 9
+    expect(buildingHours("Student Recreation Center", { weekday: 5, minutes: 21 * 60 })?.status).toBe("Closed · opens 9 AM tomorrow");
+    expect(buildingHours("Aquatic Center", { weekday: 1, minutes: 600 })).toBeNull();
+  });
+
+  it("reads the clock in Tuscaloosa time", () => {
+    // 2026-10-27 21:19 UTC is 4:19 PM CDT on a Tuesday.
+    expect(recClock(Date.UTC(2026, 9, 27, 21, 19))).toEqual({ weekday: 2, minutes: 16 * 60 + 19 });
   });
 });
