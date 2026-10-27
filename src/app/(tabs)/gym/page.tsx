@@ -9,10 +9,11 @@ import { getTimeZone } from "@/lib/auth";
 import { formatDuration, formatInstant } from "@/lib/dates";
 import { formatNumber } from "@/lib/format";
 import { listRoutines, recentWorkouts } from "@/lib/queries";
+import { getPhysique } from "@/lib/settings";
 
 export default async function GymPage() {
   const tz = await getTimeZone();
-  const [routines, history] = await Promise.all([listRoutines(), recentWorkouts(10)]);
+  const [routines, history, physique] = await Promise.all([listRoutines(), recentWorkouts(10), getPhysique()]);
 
   return (
     <>
@@ -24,6 +25,16 @@ export default async function GymPage() {
 
       <Link href="/workout?empty=1" className="btn-outline h-14 justify-start rounded-2xl px-4 text-base">
         <span className="text-xl text-accent">+</span> Start empty workout
+      </Link>
+
+      <Link href="/gym/program" className="flex items-center gap-3 rounded-[20px] border border-line bg-card px-4 py-3.5">
+        <span className="flex flex-1 flex-col gap-0.5">
+          <span className="text-[15px] font-bold">
+            {physique?.title ? `Design a program for your ${physique.title}` : "Design a program for your goal"}
+          </span>
+          <span className="text-[13px] text-muted">Routines built around the physique you want</span>
+        </span>
+        <span className="text-lg text-muted" aria-hidden="true">›</span>
       </Link>
 
       <div className="flex items-center justify-between px-1 pt-1">

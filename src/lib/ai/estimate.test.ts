@@ -121,3 +121,61 @@ describe("suggestOrders", () => {
     expect(JSON.stringify(bodies[0].messages)).toContain("getting food from Chick-fil-A");
   });
 });
+
+describe("designProgram", () => {
+  const library = [
+    { id: 1, name: "Pull-Up", equipment: "bodyweight", primaryMuscle: "back" },
+    { id: 2, name: "Lateral Raise (Dumbbell)", equipment: "dumbbell", primaryMuscle: "shoulders" },
+    { id: 3, name: "Squat (Barbell)", equipment: "barbell", primaryMuscle: "quads" },
+  ];
+
+  it("sends the photo and goal, and keeps only real exercises", async () => {
+    const { designProgram } = await import("./program");
+    const { client, bodies } = scripted([
+      message("tool_use", [
+        {
+          type: "tool_use",
+          id: "t1",
+          name: "propose_program",
+          input: {
+            summary: "Upper/lower with extra lats and delts.",
+            focus: ["Wide lats", "Side delts"],
+            days: [
+              {
+                name: "Upper A",
+                exercises: [
+                  { exercise_id: 1, sets: 4, reps: 8, rest_seconds: 150, note: "" },
+                  { exercise_id: 2, sets: 9, reps: 15, rest_seconds: 10, note: "Lead with elbows" },
+                  { exercise_id: 99, sets: 3, reps: 10, rest_seconds: 90, note: "made up" },
+                  { exercise_id: 1, sets: 3, reps: 8, rest_seconds: 90, note: "duplicate" },
+                ],
+              },
+              { name: "Empty", exercises: [{ exercise_id: 42, sets: 3, reps: 8, rest_seconds: 90, note: "" }] },
+            ],
+          },
+        },
+      ]),
+    ]);
+    const program = await designProgram(
+      {
+        physique: { title: "Nightwing build", subtitle: "Lean, broad shoulders", photo: { data: "aGk=", mediaType: "image/jpeg" } },
+        targets: ["Shoulders ÷ waist: 1.42 now → 1.60"],
+        lifts: [],
+        routines: [],
+        about: "male, 20",
+        daysPerWeek: 4,
+        minutes: 60,
+        note: "",
+        library,
+      },
+      client,
+    );
+    expect(program.days).toHaveLength(1);
+    expect(program.days[0].exercises.map((e) => e.name)).toEqual(["Pull-Up", "Lateral Raise (Dumbbell)"]);
+    expect(program.days[0].exercises[1]).toMatchObject({ sets: 6, reps: 15, restSeconds: 30 });
+    const sent = JSON.stringify(bodies[0].messages);
+    expect(sent).toContain('"type":"image"');
+    expect(sent).toContain("Nightwing build");
+    expect(sent).toContain("2 | Lateral Raise (Dumbbell) | dumbbell | shoulders");
+  });
+});
