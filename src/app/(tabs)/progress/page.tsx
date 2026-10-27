@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { verdict } from "@/components/checkin-verdict";
 import { CalendarIcon } from "@/components/icons";
 import { Card, EmptyState, PageHeader, SectionLabel } from "@/components/ui";
 import { getTimeZone } from "@/lib/auth";
+import { getCheckin } from "@/lib/checkin-queries";
 import { addDays, formatDayKey, formatInstant, todayKey } from "@/lib/dates";
 import { foodByDay, getGoals, spendingByRestaurant } from "@/lib/food-queries";
 import { formatNumber } from "@/lib/format";
@@ -13,7 +15,7 @@ export default async function ProgressPage() {
   const today = todayKey(tz);
   const monthStart = `${today.slice(0, 8)}01`;
   const weekStart = addDays(today, -6);
-  const [lifts, done, month, week, weekFood, monthFood, spending, goals] = await Promise.all([
+  const [lifts, done, month, week, weekFood, monthFood, spending, goals, checkin] = await Promise.all([
     getLiftTrends(4),
     exercisesDone(),
     workoutsByDay(monthStart, today, tz),
@@ -23,6 +25,7 @@ export default async function ProgressPage() {
     foodByDay(monthStart, today, tz),
     spendingByRestaurant(monthStart, today, tz),
     getGoals(),
+    getCheckin(tz),
   ]);
   const monthCount = [...month.values()].reduce((n, l) => n + l.length, 0);
   const weekVolume = [...week.values()].flat().reduce((t, w) => t + w.volume, 0);
@@ -49,6 +52,14 @@ export default async function ProgressPage() {
           </Link>
         }
       />
+
+      <Link href="/progress/week" className="flex items-center gap-3 rounded-[20px] border border-line bg-card px-4 py-3.5">
+        <span className="flex flex-1 flex-col gap-0.5">
+          <span className="text-[15px] font-bold">Weekly check-in</span>
+          <span className="text-[13px] text-muted">{verdict(checkin.adjustment, { pace: checkin.pace, calorieGoal: goals.calories }).title}</span>
+        </span>
+        <span className="text-lg text-muted" aria-hidden="true">›</span>
+      </Link>
 
       <div className="grid grid-cols-2 gap-2.5">
         <Card className="flex flex-col gap-1 rounded-[20px] p-4">

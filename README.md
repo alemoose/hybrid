@@ -26,6 +26,12 @@ A personal food and gym log, in the "Paper Night" style. It's built for one pers
 - Progress photos (front / side / back) with a camera that overlays your last photo so you match the pose, plus side-by-side comparison. Photos are stored in your database and only served behind your login.
 - Measurements, and strength goals that use your best estimated max (or reps) from recent sessions.
 
+**Check-ins and suggestions**
+
+- A weekly check-in: average calories and protein against your goals, the weight trend against your pace, workouts, salty days and spending. When the scale is off pace and you've been eating your goal, it suggests a 100–200 kcal change (carbs absorb it) that you apply with one tap, then waits two weeks before suggesting another. If you haven't been eating your goal, it says that instead.
+- "What should I order?": three orders from your regular spots (or one you name) that fit the calories and protein you have left. Tap one to review and log it.
+- Reminders of her: reasons you love her and a few photos, shown when a workout starts, between sets, when the rec is busy, and every few days on Today.
+
 **Everywhere**
 
 - A calendar where you tap any day to see food, sodium, water, spend, weigh-ins and workouts. A 7-day strip sits on Today.

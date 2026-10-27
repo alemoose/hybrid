@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { loadSuggestion } from "@/app/food-actions";
 import { CloseIcon } from "@/components/icons";
 import { ResumeBanner } from "@/components/resume-banner";
 import { SectionLabel, cx } from "@/components/ui";
@@ -50,13 +51,25 @@ export default async function AddPage({ searchParams }: PageProps<"/add">) {
         </p>
       ) : null}
 
-      {mode === "food" ? <FoodMode tz={tz} day={day} /> : <WorkoutMode />}
+      {mode === "food" ? (
+        <FoodMode
+          tz={tz}
+          day={day}
+          suggestion={typeof sp.suggestion === "string" ? { key: sp.suggestion, index: Number(sp.i) || 0 } : undefined}
+        />
+      ) : (
+        <WorkoutMode />
+      )}
     </>
   );
 }
 
-async function FoodMode({ tz, day }: { tz: string; day?: string }) {
-  const [usuals, goals] = await Promise.all([listUsuals(8), getGoals()]);
+async function FoodMode({ tz, day, suggestion }: { tz: string; day?: string; suggestion?: { key: string; index: number } }) {
+  const [usuals, goals, initial] = await Promise.all([
+    listUsuals(8),
+    getGoals(),
+    suggestion ? loadSuggestion(suggestion.key, suggestion.index) : null,
+  ]);
   return (
     <FoodLogger
       usuals={usuals}
@@ -64,6 +77,7 @@ async function FoodMode({ tz, day }: { tz: string; day?: string }) {
       defaultMeal={day ? "lunch" : defaultMeal(localHour(new Date(), tz))}
       day={day}
       sodiumGoal={goals.sodium}
+      initial={initial ?? undefined}
     />
   );
 }

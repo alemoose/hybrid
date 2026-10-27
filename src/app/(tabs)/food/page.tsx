@@ -54,7 +54,7 @@ export default async function FoodPage({ searchParams }: PageProps<"/food">) {
         goals={goals}
         sodiumGoal={ctx.sodiumGoal}
         trained={ctx.trained}
-        actions={{ logHref, secondary: { href: "/settings", label: "Goals" } }}
+        actions={{ logHref, secondary: { href: "/settings", label: "Goals" }, suggest: isToday }}
       />
 
       <WaterCard ounces={food.summary.water} goal={ctx.water.goal} why={ctx.water.why} day={pastDay} />

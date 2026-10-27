@@ -158,3 +158,22 @@ export async function spendingByRestaurant(firstKey: string, lastKey: string, tz
   }
   return [...map.values()].sort((a, b) => b.cents - a.cents);
 }
+
+/** Restaurants you've eaten at most over the last `days`, plus the ones in your usuals. */
+export async function frequentRestaurants(days = 90, limit = 10): Promise<string[]> {
+  const since = new Date(Date.now() - days * 86_400_000);
+  const [logs, saved] = await Promise.all([
+    db.select({ restaurant: mealLogs.restaurant }).from(mealLogs).where(gte(mealLogs.eatenAt, since)),
+    db.select({ restaurant: usuals.restaurant }).from(usuals).where(eq(usuals.archived, false)),
+  ]);
+  const counts = new Map<string, { name: string; n: number }>();
+  for (const { restaurant } of [...logs, ...saved]) {
+    const name = restaurant.trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    const entry = counts.get(key) ?? { name, n: 0 };
+    entry.n += 1;
+    counts.set(key, entry);
+  }
+  return [...counts.values()].sort((a, b) => b.n - a.n).slice(0, limit).map((e) => e.name);
+}

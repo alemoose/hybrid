@@ -5,7 +5,7 @@ import { getTimeZone } from "@/lib/auth";
 import { MEASUREMENTS, projectGoalDate, weeklyAverages, weightTrend } from "@/lib/body";
 import { dayKey, daysBetween, formatInstant, requestTime, todayKey } from "@/lib/dates";
 import { listPhotos, listWeights, measurementSnapshots, targetStatuses, type TargetStatus } from "@/lib/goal-queries";
-import { getBodyGoal, getPhysique } from "@/lib/settings";
+import { getBodyGoal, getHer, getPhysique } from "@/lib/settings";
 import { formatTargetValue } from "@/lib/target-view";
 import { PhotoCompare, QuickWeight } from "./goal-widgets";
 
@@ -32,7 +32,7 @@ function TargetRows({ statuses }: { statuses: TargetStatus[] }) {
 export default async function GoalsPage() {
   const tz = await getTimeZone();
   const now = requestTime();
-  const [physique, physiqueTargets, strengthTargets, bodyGoal, weights, progressPhotos, snapshots] = await Promise.all([
+  const [physique, physiqueTargets, strengthTargets, bodyGoal, weights, progressPhotos, snapshots, her] = await Promise.all([
     getPhysique(),
     targetStatuses("physique"),
     targetStatuses("strength"),
@@ -40,6 +40,7 @@ export default async function GoalsPage() {
     listWeights(now - 120 * 86_400_000),
     listPhotos("progress"),
     measurementSnapshots(),
+    getHer(),
   ]);
 
   // ----- Weight -----
@@ -246,6 +247,16 @@ export default async function GoalsPage() {
           <TargetRows statuses={strengthTargets} />
         )}
       </Card>
+
+      <Link href="/goals/her" className="flex items-center gap-3 rounded-[20px] border border-line bg-card px-4 py-3.5">
+        <span className="flex flex-1 flex-col gap-0.5">
+          <span className="text-[15px] font-bold">{her.name ? `Why ${her.name}` : "Reminders of her"}</span>
+          <span className="text-[13px] text-muted">
+            {her.notes.length ? `${her.notes.length} ${her.notes.length === 1 ? "reason" : "reasons"} that turn up around the app` : "Reasons you love her, shown at the gym and on Today"}
+          </span>
+        </span>
+        <span className="text-lg text-muted" aria-hidden="true">›</span>
+      </Link>
     </>
   );
 }

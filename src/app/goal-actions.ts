@@ -6,11 +6,11 @@ import { createStarterRoutines } from "@/app/actions";
 import { getTimeZone, requireAuth } from "@/lib/auth";
 import { ACTIVITY, MEASUREMENTS, type Profile } from "@/lib/body";
 import { db } from "@/lib/db";
-import { POSES, bodyWeights, exercises, goalTargets, measurements, photos, routines } from "@/lib/db/schema";
+import { POSES, bodyWeights, exercises, goalTargets, measurements, photos, routines, type PhotoKind } from "@/lib/db/schema";
 import { todayKey, zonedTime } from "@/lib/dates";
 import { getGoals, saveGoals } from "@/lib/food-queries";
 import { currentTargetValue, exerciseName, liftKey } from "@/lib/goal-queries";
-import { getBodyGoal, getPhysique, setSetting, type BodyGoal, type Physique } from "@/lib/settings";
+import { getBodyGoal, getPhysique, setSetting, type BodyGoal, type HerSettings, type Physique } from "@/lib/settings";
 
 const MAX_PHOTO_BYTES = 4_000_000;
 const MEASUREMENT_KEYS: readonly string[] = MEASUREMENTS.map((m) => m.key);
@@ -83,7 +83,7 @@ export async function deleteMeasurement(id: number): Promise<void> {
 
 type PhotoUpload = { data: string; mime: string; width: number; height: number };
 
-async function insertPhoto(kind: "progress" | "inspiration", pose: string, photo: PhotoUpload): Promise<number> {
+async function insertPhoto(kind: PhotoKind, pose: string, photo: PhotoUpload): Promise<number> {
   if (!["image/jpeg", "image/webp", "image/png"].includes(photo.mime)) throw new Error("Unsupported image type.");
   const data = Buffer.from(photo.data, "base64");
   if (data.length === 0 || data.length > MAX_PHOTO_BYTES) throw new Error("That photo is too large.");
@@ -283,4 +283,25 @@ export async function completeOnboarding(input: OnboardingInput): Promise<void> 
 
   await setSetting("onboarded", true);
   revalidatePath("/", "layout");
+}
+
+// ---------- Reminders of her ----------
+
+const MAX_NOTES = 40;
+
+export async function saveHer(input: { name: string; notes: string[] }): Promise<void> {
+  await requireAuth();
+  const notes = (input.notes ?? [])
+    .map((n) => String(n).trim().slice(0, 280))
+    .filter(Boolean)
+    .slice(0, MAX_NOTES);
+  await setSetting("her", { name: String(input.name ?? "").trim().slice(0, 40), notes } satisfies HerSettings);
+  revalidatePath("/", "layout");
+}
+
+export async function uploadReminderPhoto(photo: PhotoUpload): Promise<{ id: number }> {
+  await requireAuth();
+  const id = await insertPhoto("reminder", "", photo);
+  revalidatePath("/", "layout");
+  return { id };
 }

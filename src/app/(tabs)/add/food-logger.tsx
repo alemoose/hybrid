@@ -46,6 +46,28 @@ const blankItem = (): DraftItem => ({
   sodium: 0,
 });
 
+type Review = {
+  title: string;
+  restaurant: string;
+  source: Source;
+  note: string;
+  url: string;
+  range: [number, number] | null;
+  cached: boolean;
+};
+
+const reviewFrom = (estimate: MealEstimate): Review => ({
+  title: estimate.title,
+  restaurant: estimate.restaurant,
+  source: estimate.source,
+  note: estimate.sourceNote,
+  url: estimate.sourceUrl,
+  range: estimate.source === "estimate" ? [estimate.caloriesLow, estimate.caloriesHigh] : null,
+  cached: estimate.cached,
+});
+
+const draftItems = (estimate: MealEstimate): DraftItem[] => estimate.items.map((i) => ({ ...i, key: nextKey(), editing: false }));
+
 type SpeechRecognitionLike = {
   lang: string;
   interimResults: boolean;
@@ -69,7 +91,10 @@ export function FoodLogger({
   defaultMeal,
   day,
   sodiumGoal,
+  initial,
 }: {
+  /** Opens straight on the review screen, e.g. for a suggested order. */
+  initial?: MealEstimate;
   usuals: UsualOption[];
   aiReady: boolean;
   defaultMeal: Meal;
@@ -82,17 +107,9 @@ export function FoodLogger({
   const [photo, setPhoto] = useState<{ data: string; mime: string; preview: string } | null>(null);
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [review, setReview] = useState<{
-    title: string;
-    restaurant: string;
-    source: Source;
-    note: string;
-    url: string;
-    range: [number, number] | null;
-    cached: boolean;
-  } | null>(null);
-  const [items, setItems] = useState<DraftItem[]>([]);
-  const [cooking, setCooking] = useState(true);
+  const [review, setReview] = useState<Review | null>(() => (initial ? reviewFrom(initial) : null));
+  const [items, setItems] = useState<DraftItem[]>(() => (initial ? draftItems(initial) : []));
+  const [cooking, setCooking] = useState(initial ? initial.source === "estimate" : true);
   const [split, setSplit] = useState(false);
   const [price, setPrice] = useState("");
   const [looking, startLooking] = useTransition();
@@ -140,16 +157,8 @@ export function FoodLogger({
 
   const startReview = (estimate: MealEstimate | null) => {
     if (estimate) {
-      setReview({
-        title: estimate.title,
-        restaurant: estimate.restaurant,
-        source: estimate.source,
-        note: estimate.sourceNote,
-        url: estimate.sourceUrl,
-        range: estimate.source === "estimate" ? [estimate.caloriesLow, estimate.caloriesHigh] : null,
-        cached: estimate.cached,
-      });
-      setItems(estimate.items.map((i) => ({ ...i, key: nextKey(), editing: false })));
+      setReview(reviewFrom(estimate));
+      setItems(draftItems(estimate));
       setCooking(estimate.source === "estimate");
       setSplit(false);
     } else {

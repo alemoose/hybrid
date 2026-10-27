@@ -4,12 +4,14 @@ import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getTimeZone, requireAuth } from "@/lib/auth";
 import { EstimateError, aiConfigured, estimateMeal } from "@/lib/ai/estimate";
+import { suggestOrders, type OrderSuggestion } from "@/lib/ai/suggest";
+import { getDayContext } from "@/lib/day-context";
 import { db } from "@/lib/db";
 import { MEALS, estimateCache, mealItems, mealLogs, usuals, waterLogs, type Meal } from "@/lib/db/schema";
-import { dayKey, todayKey, utcWindow, zonedTime } from "@/lib/dates";
-import { getGoals, parseItems, saveGoals } from "@/lib/food-queries";
+import { dayKey, localHour, todayKey, utcWindow, zonedTime } from "@/lib/dates";
+import { frequentRestaurants, getGoals, parseItems, saveGoals } from "@/lib/food-queries";
 import type { EstimateResult, LogMealInput, MealEstimate } from "@/lib/food-types";
-import { DEFAULT_GOALS, cacheKey, totals, type FoodItem, type Goals } from "@/lib/nutrition";
+import { DEFAULT_GOALS, cacheKey, defaultMeal, totals, type FoodItem, type Goals } from "@/lib/nutrition";
 
 const MEAL_HOUR: Record<Meal, number> = { breakfast: 8, lunch: 12, snack: 15, dinner: 19 };
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -37,6 +39,58 @@ async function eatenAtFor(day: string | undefined, meal: Meal): Promise<Date> {
   const tz = await getTimeZone();
   if (!day || !/^\d{4}-\d{2}-\d{2}$/.test(day) || day === todayKey(tz)) return new Date();
   return zonedTime(day, MEAL_HOUR[meal], tz);
+}
+
+// ---------- Suggestions ----------
+
+export type SuggestResult = { ok: true; key: string; orders: OrderSuggestion[] } | { ok: false; error: string };
+
+/** Three orders that fit what's left today. The same ask on the same day is answered from the cache. */
+export async function suggestFood(input: { restaurant: string; note: string }): Promise<SuggestResult> {
+  await requireAuth();
+  if (!aiConfigured()) return { ok: false, error: "Suggestions need an ANTHROPIC_API_KEY." };
+  const tz = await getTimeZone();
+  const today = todayKey(tz);
+  const restaurant = String(input.restaurant ?? "").trim().slice(0, 60);
+  const note = String(input.note ?? "").trim().slice(0, 200);
+  const [ctx, restaurants] = await Promise.all([getDayContext(today, tz), frequentRestaurants()]);
+  const n = ctx.food.summary.nutrients;
+  const left = {
+    calories: Math.max(0, ctx.goals.calories - n.calories),
+    protein: Math.max(0, ctx.goals.protein - n.protein),
+    carbs: Math.max(0, ctx.goals.carbs - n.carbs),
+    fat: Math.max(0, ctx.goals.fat - n.fat),
+    sodium: Math.max(0, ctx.sodiumGoal - n.sodium),
+  };
+  if (left.calories < 150) return { ok: false, error: "You're at your calories for today. Nothing left to plan." };
+
+  const meal = defaultMeal(localHour(new Date(), tz));
+  // Rounded so small changes in what's left still reuse the answer.
+  const key = `suggest:${today}:${cacheKey(restaurant) || "any"}:${Math.round(left.calories / 100)}:${Math.round(left.protein / 10)}:${cacheKey(note)}`;
+  const [hit] = await db.select().from(estimateCache).where(eq(estimateCache.key, key));
+  if (hit) return { ok: true, key, orders: JSON.parse(hit.resultJson) as OrderSuggestion[] };
+
+  try {
+    const goals = await getGoals();
+    const orders = await suggestOrders({ left, meal, restaurants, restaurant, note, homeArea: goals.homeArea });
+    const resultJson = JSON.stringify(orders);
+    await db.insert(estimateCache).values({ key, resultJson }).onConflictDoUpdate({ target: estimateCache.key, set: { resultJson } });
+    return { ok: true, key, orders };
+  } catch (err) {
+    if (err instanceof EstimateError) return { ok: false, error: err.message };
+    console.error("suggestFood failed", err);
+    return { ok: false, error: "Something went wrong. Try again." };
+  }
+}
+
+/** A saved suggestion, to open in the food logger's review screen. */
+export async function loadSuggestion(key: string, index: number): Promise<OrderSuggestion | null> {
+  await requireAuth();
+  if (!key.startsWith("suggest:")) return null;
+  const [hit] = await db.select().from(estimateCache).where(eq(estimateCache.key, key));
+  if (!hit) return null;
+  const orders = JSON.parse(hit.resultJson) as OrderSuggestion[];
+  return orders[index] ?? null;
 }
 
 // ---------- Estimating ----------

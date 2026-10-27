@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, gte } from "drizzle-orm";
 import { MEASUREMENTS, goalProgress, weightTrend, type WeighIn } from "./body";
 import { db } from "./db";
-import { bodyWeights, exercises, goalTargets, measurements, photos, type GoalTarget } from "./db/schema";
+import { bodyWeights, exercises, goalTargets, measurements, photos, type GoalTarget, type PhotoKind } from "./db/schema";
 import { exerciseSessions } from "./queries";
 import { sessionMetrics } from "./training";
 
@@ -46,7 +46,7 @@ export async function measurementHistory(limit = 60) {
 
 export type PhotoMeta = { id: number; pose: string; takenAt: number; width: number; height: number };
 
-export async function listPhotos(kind: "progress" | "inspiration", pose?: string): Promise<PhotoMeta[]> {
+export async function listPhotos(kind: PhotoKind, pose?: string): Promise<PhotoMeta[]> {
   const rows = await db
     .select({ id: photos.id, pose: photos.pose, takenAt: photos.takenAt, width: photos.width, height: photos.height })
     .from(photos)

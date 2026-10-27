@@ -29,3 +29,6 @@ export const getProfile = () => getSetting<Profile | null>("profile", null);
 export const getBodyGoal = () => getSetting<BodyGoal | null>("bodyGoal", null);
 export const getPhysique = () => getSetting<Physique | null>("physique", null);
 export const isOnboarded = () => getSetting<boolean>("onboarded", false);
+
+export type HerSettings = { name: string; notes: string[] };
+export const getHer = () => getSetting<HerSettings>("her", { name: "", notes: [] });

@@ -3,6 +3,8 @@ import { getTimeZone } from "@/lib/auth";
 import { todayKey } from "@/lib/dates";
 import { areaRank, busyLevel, formatHour, parseFeedTime, type Busy, type RecArea } from "@/lib/rec";
 import { getRecNow } from "@/lib/rec-queries";
+import { getReminders } from "@/lib/reminder-queries";
+import { pickReminder } from "@/lib/reminders";
 import { Card, cx } from "./ui";
 
 export const BUSY: Record<Busy, { label: string; text: string; bar: string }> = {
@@ -52,7 +54,7 @@ export function AreaRow({ area, today }: { area: RecArea; today: string }) {
 
 /** The rec center right now: weight room, resistance room and cardio. Links to every area. */
 export async function RecCard() {
-  const [now, tz] = await Promise.all([getRecNow(), getTimeZone()]);
+  const [now, tz, reminders] = await Promise.all([getRecNow(), getTimeZone(), getReminders()]);
   const today = todayKey(tz);
 
   if (now.status !== "ok") {
@@ -73,6 +75,10 @@ export async function RecCard() {
   const top = main.areas.filter((a) => areaRank(a.name) < 9).slice(0, 3);
   const shown = top.length ? top : main.areas.slice(0, 3);
   const stamp = shown.map((a) => parseFeedTime(a.updated)).find((t) => t?.key === today);
+  // When the weight room is filling up, a nudge to keep your eyes on your own plan.
+  const weightRoom = shown.find((a) => areaRank(a.name) === 0);
+  const crowded = weightRoom && !weightRoom.closed && busyLevel(weightRoom.pct) !== "quiet" && busyLevel(weightRoom.pct) != null;
+  const note = crowded && reminders.notes.length ? pickReminder({ ...reminders, photoIds: [] }, `rec:${today}:${stamp?.hour ?? 0}`).note : null;
 
   return (
     <Card className="flex flex-col gap-3.5 p-4">
@@ -83,6 +89,12 @@ export async function RecCard() {
       {shown.map((a) => (
         <AreaRow key={a.id || a.name} area={a} today={today} />
       ))}
+      {crowded ? (
+        <div className="flex flex-col gap-1 rounded-2xl bg-inner px-3.5 py-3">
+          <span className="text-[13px] font-semibold text-ink-2">Filling up. Headphones in, eyes on your plan.</span>
+          {note ? <span className="text-[13px] leading-snug text-rose">{note}</span> : null}
+        </div>
+      ) : null}
       <Link href="/gym/rec" className="border-t border-line pt-3 text-sm font-semibold text-accent">
         Every area and usual quiet times
       </Link>

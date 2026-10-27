@@ -209,7 +209,8 @@ export const measurements = sqliteTable(
   (t) => [index("measurements_kind_idx").on(t.kind, t.loggedAt)],
 );
 
-export const PHOTO_KINDS = ["progress", "inspiration"] as const;
+export const PHOTO_KINDS = ["progress", "inspiration", "reminder"] as const;
+export type PhotoKind = (typeof PHOTO_KINDS)[number];
 export const POSES = ["front", "side", "back"] as const;
 export type Pose = (typeof POSES)[number];
 

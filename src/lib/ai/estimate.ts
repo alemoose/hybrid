@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { MealEstimate } from "../food-types";
 import type { FoodItem } from "../nutrition";
 
-const MODEL = "claude-opus-5-5";
+export const MODEL = "claude-opus-5-5";
 
 export function aiConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY);
@@ -23,6 +23,37 @@ How to work:
 
 When you have the numbers, call record_meal exactly once.`;
 
+/** One food per entry; nutrient values are for ONE unit. Shared with order suggestions. */
+export const ITEMS_SCHEMA = {
+  type: "array",
+  items: {
+    type: "object",
+    additionalProperties: false,
+    required: ["name", "quantity", "unit", "calories", "protein_g", "carbs_g", "fat_g", "sodium_mg"],
+    properties: {
+      name: { type: "string" },
+      quantity: { type: "number" },
+      unit: { type: "string", description: "e.g. serving, taco, slice, cup, 6 pc" },
+      calories: { type: "number" },
+      protein_g: { type: "number" },
+      carbs_g: { type: "number" },
+      fat_g: { type: "number" },
+      sodium_mg: { type: "number" },
+    },
+  },
+} as const;
+
+export type ItemInput = {
+  name: string;
+  quantity: number;
+  unit: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  sodium_mg: number;
+};
+
 const RECORD_MEAL: Anthropic.Beta.BetaTool = {
   name: "record_meal",
   description: "Record the meal's items and nutrition. Call exactly once, after any lookups.",
@@ -38,24 +69,7 @@ const RECORD_MEAL: Anthropic.Beta.BetaTool = {
       source: { type: "string", enum: ["official", "estimate", "label"] },
       source_note: { type: "string", description: "A few words on where the numbers came from." },
       source_url: { type: "string", description: "Official nutrition page used, or empty." },
-      items: {
-        type: "array",
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: ["name", "quantity", "unit", "calories", "protein_g", "carbs_g", "fat_g", "sodium_mg"],
-          properties: {
-            name: { type: "string" },
-            quantity: { type: "number" },
-            unit: { type: "string", description: "e.g. serving, taco, slice, cup, 6 pc" },
-            calories: { type: "number" },
-            protein_g: { type: "number" },
-            carbs_g: { type: "number" },
-            fat_g: { type: "number" },
-            sodium_mg: { type: "number" },
-          },
-        },
-      },
+      items: ITEMS_SCHEMA,
       calories_low: { type: "number" },
       calories_high: { type: "number" },
     },
@@ -69,16 +83,7 @@ type RecordInput = {
   source: "official" | "estimate" | "label";
   source_note: string;
   source_url: string;
-  items: {
-    name: string;
-    quantity: number;
-    unit: string;
-    calories: number;
-    protein_g: number;
-    carbs_g: number;
-    fat_g: number;
-    sodium_mg: number;
-  }[];
+  items: ItemInput[];
   calories_low: number;
   calories_high: number;
 };
@@ -88,8 +93,8 @@ const n = (v: unknown, max: number) => {
   return Number.isFinite(x) ? Math.min(max, Math.max(0, x)) : 0;
 };
 
-function toEstimate(input: RecordInput): MealEstimate {
-  const items: FoodItem[] = (input.items ?? []).slice(0, 30).map((i) => ({
+export function toFoodItems(list: ItemInput[] | undefined): FoodItem[] {
+  return (list ?? []).slice(0, 30).map((i) => ({
     name: String(i.name).slice(0, 80) || "Item",
     quantity: n(i.quantity, 50) || 1,
     unit: String(i.unit).slice(0, 30) || "serving",
@@ -99,6 +104,10 @@ function toEstimate(input: RecordInput): MealEstimate {
     fat: n(i.fat_g, 500),
     sodium: n(i.sodium_mg, 20000),
   }));
+}
+
+function toEstimate(input: RecordInput): MealEstimate {
+  const items = toFoodItems(input.items);
   const source = ["official", "estimate", "label"].includes(input.source) ? input.source : "estimate";
   return {
     title: String(input.title).slice(0, 80) || "Meal",
@@ -115,6 +124,14 @@ function toEstimate(input: RecordInput): MealEstimate {
 }
 
 export class EstimateError extends Error {}
+
+/** Turns SDK errors into messages the food screens can show. */
+export function apiErrorMessage(err: unknown, what = "Lookup"): EstimateError | null {
+  if (err instanceof Anthropic.AuthenticationError) return new EstimateError("The Anthropic API key isn't valid.");
+  if (err instanceof Anthropic.RateLimitError) return new EstimateError("Too many lookups at once. Try again in a minute.");
+  if (err instanceof Anthropic.APIError) return new EstimateError(`${what} failed (${err.status ?? "network"}). Try again.`);
+  return null;
+}
 
 export async function estimateMeal(input: {
   text: string;
@@ -152,10 +169,7 @@ export async function estimateMeal(input: {
         messages,
       });
     } catch (err) {
-      if (err instanceof Anthropic.AuthenticationError) throw new EstimateError("The Anthropic API key isn't valid.");
-      if (err instanceof Anthropic.RateLimitError) throw new EstimateError("Too many lookups at once. Try again in a minute.");
-      if (err instanceof Anthropic.APIError) throw new EstimateError(`Lookup failed (${err.status ?? "network"}). Try again.`);
-      throw err;
+      throw apiErrorMessage(err) ?? err;
     }
 
     if (response.stop_reason === "refusal") throw new EstimateError("Couldn't estimate that one. Try describing it differently.");

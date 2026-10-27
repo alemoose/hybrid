@@ -18,7 +18,7 @@ export function NutritionCard({
   goals: Goals;
   sodiumGoal: number;
   trained: boolean;
-  actions?: { logHref: string; secondary?: { href: string; label: string } };
+  actions?: { logHref: string; secondary?: { href: string; label: string }; suggest?: boolean };
 }) {
   const n = summary.nutrients;
   const left = Math.round(goals.calories - n.calories);
@@ -90,6 +90,11 @@ export function NutritionCard({
             </Link>
           ) : null}
         </div>
+      ) : null}
+      {actions?.suggest && left >= 150 ? (
+        <Link href="/food/suggest" className="-mt-1 text-center text-sm font-semibold text-accent">
+          What should I order?
+        </Link>
       ) : null}
     </section>
   );

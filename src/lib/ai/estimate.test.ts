@@ -89,3 +89,35 @@ describe("estimateMeal", () => {
     await expect(estimateMeal({ text: "x", homeArea: "", client })).rejects.toThrow("Couldn't estimate");
   });
 });
+
+describe("suggestOrders", () => {
+  it("reads three orders and their totals", async () => {
+    const { suggestOrders } = await import("./suggest");
+    const order = (title: string, calories: number) => ({
+      restaurant: "Chick-fil-A",
+      title,
+      why: "Lots of protein",
+      source: "official",
+      source_url: "https://www.chick-fil-a.com/nutrition-allergens",
+      items: [{ name: title, quantity: 1, unit: "serving", calories, protein_g: 40, carbs_g: 20, fat_g: 10, sodium_mg: 900 }],
+    });
+    const { client, bodies } = scripted([
+      message("tool_use", [
+        { type: "tool_use", id: "t1", name: "suggest_orders", input: { orders: [order("12 ct grilled nuggets", 200), order("Grilled club", 520), order("Cobb salad", 830)] } },
+      ]),
+    ]);
+    const orders = await suggestOrders({
+      left: { calories: 1685, protein: 121, carbs: 188, fat: 43, sodium: 410 },
+      meal: "dinner",
+      restaurants: ["Chick-fil-A", "Foosackly's"],
+      restaurant: "Chick-fil-A",
+      note: "",
+      homeArea: "Tuscaloosa, AL",
+      client,
+    });
+    expect(orders).toHaveLength(3);
+    expect(orders[1]).toMatchObject({ title: "Grilled club", source: "official", caloriesLow: 520, why: "Lots of protein" });
+    expect(JSON.stringify(bodies[0].messages)).toContain("1,685 kcal, 121 g protein");
+    expect(JSON.stringify(bodies[0].messages)).toContain("getting food from Chick-fil-A");
+  });
+});

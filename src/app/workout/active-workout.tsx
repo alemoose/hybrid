@@ -6,13 +6,15 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { loadExercisePlan, saveWorkout } from "@/app/actions";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { CheckIcon, DownIcon, MoreIcon } from "@/components/icons";
+import { ReminderCard } from "@/components/reminder-card";
 import { Pill, cx } from "@/components/ui";
 import { clearDraft, newId, readDraft, writeDraft } from "@/lib/draft-storage";
 import { changeTone, formatNumber } from "@/lib/format";
+import { hasReminders, pickReminder, type Reminders } from "@/lib/reminders";
 import { formatWeight, type SetKind } from "@/lib/training";
 import type { DraftExercise, DraftSet, ExerciseOption, WorkoutDraft } from "@/lib/workout-types";
 
-type Props = { plan: WorkoutDraft; exerciseOptions: ExerciseOption[]; intent: "start" | "resume" };
+type Props = { plan: WorkoutDraft; exerciseOptions: ExerciseOption[]; intent: "start" | "resume"; reminders: Reminders };
 
 const KIND_CYCLE: SetKind[] = ["working", "warmup", "drop", "failure"];
 const WARMUP_REST = 60;
@@ -107,6 +109,7 @@ export default function ActiveWorkout(props: Props) {
   const [picking, setPicking] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reminderHidden, setReminderHidden] = useState(false);
   const [saving, startSaving] = useTransition();
   const [, startAdding] = useTransition();
   const now = useNow(500);
@@ -175,6 +178,13 @@ export default function ActiveWorkout(props: Props) {
   const volume = doneSets
     .filter((s) => s.kind === "working" || s.kind === "failure")
     .reduce((t, s) => t + parseWeight(s.weight) * parseReps(s.reps), 0);
+
+  // A reminder of her when the workout opens (until the first set), and a different note each rest.
+  const { reminders } = props;
+  const herLabel = reminders.name ? `Why ${reminders.name}` : "Remember";
+  const startReminder =
+    hasReminders(reminders) && !reminderHidden && doneSets.length === 0 ? pickReminder(reminders, `workout:${draft.startedAt}`) : null;
+  const restNote = rest && reminders.notes.length ? pickReminder({ ...reminders, photoIds: [] }, `rest:${rest.endsAt}`).note : null;
 
   const toggleDone = (ex: DraftExercise, set: DraftSet) => {
     chime.unlock();
@@ -304,6 +314,7 @@ export default function ActiveWorkout(props: Props) {
                 style={{ width: `${Math.max(0, Math.min(100, (restLeft / rest.total) * 100))}%` }}
               />
             </div>
+            {restNote ? <p className="line-clamp-2 text-[13px] leading-snug text-rose">{restNote}</p> : null}
           </div>
           <button
             type="button"
@@ -323,6 +334,8 @@ export default function ActiveWorkout(props: Props) {
           {error}
         </p>
       ) : null}
+
+      {startReminder ? <ReminderCard label={herLabel} {...startReminder} onClose={() => setReminderHidden(true)} /> : null}
 
       {draft.exercises.length === 0 ? (
         <p className="rounded-3xl border border-dashed border-dash p-6 text-center text-[15px] text-muted">

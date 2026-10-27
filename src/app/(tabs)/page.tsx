@@ -1,17 +1,23 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createStarterRoutines } from "@/app/actions";
+import { dismissCheckin } from "@/app/checkin-actions";
+import { formatRate, paceText, verdict } from "@/components/checkin-verdict";
 import { NutritionCard } from "@/components/nutrition-card";
+import { ReminderCard } from "@/components/reminder-card";
 import { ResumeBanner } from "@/components/resume-banner";
 import { WaterCard } from "@/components/water-card";
 import { WeekStrip } from "@/components/week-strip";
 import { Bar, Card, DateTile, PageHeader, Pill, SectionTitle, TextLink } from "@/components/ui";
 import { getTimeZone } from "@/lib/auth";
 import { addDays, formatDayKey, formatDuration, formatInstant, todayKey } from "@/lib/dates";
+import { getCheckin } from "@/lib/checkin-queries";
 import { getDayContext } from "@/lib/day-context";
 import { foodByDay } from "@/lib/food-queries";
 import { changeTone, daysSinceText, formatNumber } from "@/lib/format";
 import { calorieStatus } from "@/lib/nutrition";
+import { getReminders } from "@/lib/reminder-queries";
+import { hasReminders, pickReminder, showsOnToday } from "@/lib/reminders";
 import { isOnboarded } from "@/lib/settings";
 import { getUpNext, lastSevenDays, recentWorkouts } from "@/lib/queries";
 
@@ -19,13 +25,16 @@ export default async function TodayPage() {
   const [tz, onboarded] = await Promise.all([getTimeZone(), isOnboarded()]);
   if (!onboarded) redirect("/welcome");
   const today = todayKey(tz);
-  const [upNext, week, recent, ctx, weekFood] = await Promise.all([
+  const [upNext, week, recent, ctx, weekFood, checkin, reminders] = await Promise.all([
     getUpNext(tz),
     lastSevenDays(tz),
     recentWorkouts(3),
     getDayContext(today, tz),
     foodByDay(addDays(today, -6), today, tz),
+    getCheckin(tz),
+    getReminders(),
   ]);
+  const reminder = hasReminders(reminders) && showsOnToday(today) ? pickReminder(reminders, today) : null;
   const strip = week.map((d) => ({
     ...d,
     // Today is still in progress, so it gets no verdict yet.
@@ -47,14 +56,37 @@ export default async function TodayPage() {
       <WeekStrip days={strip} />
       <ResumeBanner />
 
+      {checkin.nudge && checkin.adjustment.kind === "change" ? (
+        <Card className="flex flex-col gap-2.5 p-4">
+          <span className="text-[13px] font-bold text-gold">Weekly check-in</span>
+          <span className="text-[17px] font-bold">
+            {verdict(checkin.adjustment, { pace: checkin.pace, calorieGoal: checkin.goals.calories }).title}?
+          </span>
+          <span className="text-[13px] text-muted">
+            You&apos;re at {formatRate(checkin.adjustment.rate)}, and your pace is {paceText(checkin.pace)}.
+          </span>
+          <div className="flex gap-2">
+            <Link href="/progress/week" className="btn-primary h-11 flex-1">
+              See check-in
+            </Link>
+            <form action={dismissCheckin}>
+              <button type="submit" className="btn-outline h-11 px-5">
+                Not now
+              </button>
+            </form>
+          </div>
+        </Card>
+      ) : null}
+
       <NutritionCard
         summary={ctx.food.summary}
         goals={ctx.goals}
         sodiumGoal={ctx.sodiumGoal}
         trained={ctx.trained}
-        actions={{ logHref: "/add?mode=food", secondary: { href: "/food", label: "Food log" } }}
+        actions={{ logHref: "/add?mode=food", secondary: { href: "/food", label: "Food log" }, suggest: true }}
       />
       <WaterCard ounces={ctx.food.summary.water} goal={ctx.water.goal} why={ctx.water.why} />
+      {reminder ? <ReminderCard label={reminders.name ? `Why ${reminders.name}` : "Remember"} {...reminder} /> : null}
 
       {upNext ? (
         <Card className="flex flex-col gap-0.5 px-5 py-4">
