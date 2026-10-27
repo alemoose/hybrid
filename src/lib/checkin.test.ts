@@ -37,6 +37,11 @@ describe("suggestAdjustment", () => {
     });
   });
 
+  it("won't lower calories while creatine water weight settles", () => {
+    expect(suggestAdjustment({ ...base, rate: 1.3, creatineDaysLeft: 10 })).toEqual({ kind: "creatine-hold", rate: 1.3, daysLeft: 10 });
+    expect(suggestAdjustment({ ...base, rate: 0, creatineDaysLeft: 10 })).toMatchObject({ kind: "change", delta: 200 });
+  });
+
   it("never goes under the floor", () => {
     expect(suggestAdjustment({ pace: -1, rate: 0, calorieGoal: 1250, avgCalories: 1250, loggedDays: 7 })).toMatchObject({
       kind: "change",

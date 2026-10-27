@@ -15,7 +15,9 @@ export type Adjustment =
   | { kind: "need-food"; loggedDays: number }
   | { kind: "on-track"; rate: number }
   | { kind: "hit-goal-first"; rate: number; avgCalories: number; direction: "more" | "less" }
-  | { kind: "change"; rate: number; delta: number; calories: number };
+  | { kind: "change"; rate: number; delta: number; calories: number }
+  /** Would lower calories, but creatine water weight is still settling. */
+  | { kind: "creatine-hold"; rate: number; daysLeft: number };
 
 const round50 = (n: number) => Math.round(n / 50) * 50;
 
@@ -32,6 +34,8 @@ export function suggestAdjustment(input: {
   avgCalories: number;
   loggedDays: number;
   minCalories?: number;
+  /** Days left in a creatine loading phase; its water weight makes the scale run fast. */
+  creatineDaysLeft?: number;
 }): Adjustment {
   const { pace, rate, calorieGoal, avgCalories, loggedDays } = input;
   if (rate == null) return { kind: "need-weights" };
@@ -40,6 +44,7 @@ export function suggestAdjustment(input: {
   if (Math.abs(off) <= ON_TRACK) return { kind: "on-track", rate };
 
   const needed = -off * 500;
+  if (needed < 0 && (input.creatineDaysLeft ?? 0) > 0) return { kind: "creatine-hold", rate, daysLeft: input.creatineDaysLeft! };
   if (needed > 0 && avgCalories < calorieGoal - ADHERENCE_GAP) {
     return { kind: "hit-goal-first", rate, avgCalories, direction: "more" };
   }

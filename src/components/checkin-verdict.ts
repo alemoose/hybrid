@@ -57,6 +57,12 @@ export function verdict(
         body: `You're at ${formatRate(a.rate)} and your pace is ${pace}, while eating close to your goal. ${a.delta > 0 ? "+" : "−"}${Math.abs(a.delta)} kcal a day, all from carbs, should ${a.delta > 0 ? "get the scale moving" : "slow it to your pace"}.`,
         tone: "gold",
       };
+    case "creatine-hold":
+      return {
+        title: "Holding calories steady",
+        body: `You're at ${formatRate(a.rate)} (pace ${pace}), but you started creatine recently. It adds 1–3 lb of water to your muscles over the first few weeks, so the scale is running ahead of the real trend. The check-in won't lower calories for another ${a.daysLeft} ${a.daysLeft === 1 ? "day" : "days"}.`,
+        tone: "muted",
+      };
     case "cooldown":
       return {
         title: `Calories changed to ${formatNumber(a.change.to)}`,

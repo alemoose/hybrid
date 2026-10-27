@@ -3,6 +3,8 @@ import { weightTrend } from "./body";
 import { ADJUST_COOLDOWN_DAYS, suggestAdjustment, weekAverages, type Adjustment } from "./checkin";
 import { addDays, daysBetween, todayKey } from "./dates";
 import { foodByDay, getGoals } from "./food-queries";
+import { habitHistory } from "./habit-queries";
+import { creatineLoadingDaysLeft } from "./habits";
 import { listWeights } from "./goal-queries";
 import { workoutsByDay } from "./queries";
 import { getBodyGoal, getProfile, getSetting } from "./settings";
@@ -24,7 +26,7 @@ export async function getCheckin(tz: string, now = Date.now()) {
   const last = addDays(today, -1);
   const first = addDays(today, -7);
   const prevFirst = addDays(today, -14);
-  const [goals, bodyGoal, profile, food, workouts, prevWorkouts, weights, lastChange, dismissed] = await Promise.all([
+  const [goals, bodyGoal, profile, food, workouts, prevWorkouts, weights, lastChange, dismissed, creatine] = await Promise.all([
     getGoals(),
     getBodyGoal(),
     getProfile(),
@@ -34,6 +36,7 @@ export async function getCheckin(tz: string, now = Date.now()) {
     listWeights(now - 42 * DAY),
     getLastChange(),
     getDismissedDay(),
+    habitHistory("creatine", today),
   ]);
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(first, i));
@@ -69,6 +72,7 @@ export async function getCheckin(tz: string, now = Date.now()) {
           avgCalories: thisWeek.avgCalories,
           loggedDays: thisWeek.loggedDays,
           minCalories: profile?.sex === "female" ? 1200 : 1500,
+          creatineDaysLeft: creatineLoadingDaysLeft(creatine, today),
         });
 
   return {
