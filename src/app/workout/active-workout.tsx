@@ -273,8 +273,8 @@ export default function ActiveWorkout(props: Props) {
   };
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-3.5 px-[18px] pt-[max(env(safe-area-inset-top),16px)] pb-[max(env(safe-area-inset-bottom),32px)]">
-      <header className="sticky top-0 z-10 -mx-[18px] flex items-center gap-3 bg-bg/95 px-[18px] pt-1 pb-2 backdrop-blur">
+    <main className="mx-auto flex max-w-md flex-col gap-3.5 px-[18px] pt-[max(calc(env(safe-area-inset-top)+12px),16px)] pb-[max(env(safe-area-inset-bottom),32px)]">
+      <header className="sticky top-[env(safe-area-inset-top)] z-10 -mx-[18px] flex items-center gap-3 bg-bg/95 px-[18px] pt-1 pb-2 backdrop-blur">
         <Link href="/" aria-label="Minimize workout" className="circle-btn">
           <DownIcon size={18} />
         </Link>
@@ -290,7 +290,7 @@ export default function ActiveWorkout(props: Props) {
       </header>
 
       {rest ? (
-        <section aria-label="Rest timer" className="sticky top-[68px] z-10 flex items-center gap-3 rounded-[18px] bg-inner px-4 py-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
+        <section aria-label="Rest timer" className="sticky top-[calc(env(safe-area-inset-top)+68px)] z-10 flex items-center gap-3 rounded-[18px] bg-inner px-4 py-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
           <div className="flex flex-1 flex-col gap-2">
             <div className="flex items-baseline gap-2">
               <span className="text-sm font-semibold text-muted">{restLeft > 0 ? "Rest" : "Rest done"}</span>

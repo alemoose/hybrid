@@ -214,7 +214,7 @@ export function Wizard({ initial }: { initial: Initial }) {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-[18px] pt-[max(env(safe-area-inset-top),20px)] pb-[max(env(safe-area-inset-bottom),24px)]">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-[18px] pt-[max(calc(env(safe-area-inset-top)+12px),20px)] pb-[max(env(safe-area-inset-bottom),24px)]">
       <div className="flex items-center gap-1.5" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
         {STEPS.map((s, i) => (
           <span key={s} className={cx("h-1.5 flex-1 rounded-full", i <= step ? "bg-ink" : "bg-line-strong")} />

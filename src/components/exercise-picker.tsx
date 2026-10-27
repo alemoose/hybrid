@@ -46,7 +46,7 @@ export function ExercisePicker({
 
   return (
     <div role="dialog" aria-modal="true" aria-label="Add exercise" className="fixed inset-0 z-40 flex flex-col bg-bg">
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 overflow-hidden px-[18px] pt-[max(env(safe-area-inset-top),16px)]">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 overflow-hidden px-[18px] pt-[max(calc(env(safe-area-inset-top)+12px),16px)]">
         <div className="flex items-center justify-between">
           <button type="button" onClick={onClose} className="h-11 text-[15px] font-semibold text-accent">
             Cancel
