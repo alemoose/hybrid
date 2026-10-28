@@ -1,12 +1,13 @@
 # Saves the UA rec center's live headcounts every 30 minutes, so Hybrid's
 # "usual quiet times" charts fill in without opening the app.
-# Hours are UTC: 10:00–05:30 covers 5 AM–12:30 AM Central (4 AM–11:30 PM in winter);
-# the app skips any run while both buildings are closed.
+# Hours are UTC: 10:07–05:37 covers 5 AM–12:37 AM Central (4 AM–11:37 PM in winter);
+# the app skips any run while both buildings are closed. Runs at :07 and :37 because
+# GitHub often delays or drops scheduled runs at :00 and :30, its busiest times.
 name: Rec center counts
 
 on:
   schedule:
-    - cron: "*/30 0-5,10-23 * * *"
+    - cron: "7,37 0-5,10-23 * * *"
   workflow_dispatch:
 
 jobs:

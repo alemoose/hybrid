@@ -127,15 +127,16 @@ const MIN_POLL_GAP = 10 * 60_000;
 export async function pollRecCounts(now = Date.now()): Promise<{ status: string; areas?: number }> {
   const last = await getLastPoll();
   if (now - last < MIN_POLL_GAP) return { status: "skipped: polled recently" };
+  // Record the run even while closed, so "last ran" shows the scheduler is alive.
+  await setSetting("recLastPoll", now);
   if (!anyBuildingOpen(recClock(now))) {
     return { status: "skipped: closed" };
   }
-  await setSetting("recLastPoll", now);
   const result = await getRecNow({ fresh: true });
   return result.status === "ok"
     ? { status: "ok", areas: result.groups.reduce((n, g) => n + g.areas.length, 0) }
     : { status: result.status === "error" ? `error: ${result.message}` : "no feed key" };
 }
 
-/** When the scheduled sampler last ran (0 if never). */
+/** When the scheduled sampler last ran, open or closed (0 if never). */
 export const getLastPoll = () => getSetting<number>("recLastPoll", 0);
