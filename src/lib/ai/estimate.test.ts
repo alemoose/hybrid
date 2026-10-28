@@ -77,6 +77,18 @@ describe("estimateMeal", () => {
     expect(second.map((m) => m.role)).toEqual(["user", "assistant", "user"]);
   });
 
+  it("sends every photo, numbered, with the description", async () => {
+    const { client, bodies } = scripted([
+      message("tool_use", [{ type: "tool_use", id: "t1", name: "record_meal", input: recorded }]),
+    ]);
+    const photo = { data: "aGk=", mediaType: "image/jpeg" as const };
+    await estimateMeal({ text: "ate 3/4 of the chicken package", images: [photo, photo], homeArea: "", client });
+    const content = (bodies[0].messages as { content: { type: string; text?: string }[] }[])[0].content;
+    expect(content.map((b) => b.type)).toEqual(["text", "image", "text", "image", "text"]);
+    expect(content[2].text).toBe("Photo 2:");
+    expect(content[4].text).toContain("3/4 of the chicken package");
+  });
+
   it("clamps bad numbers", async () => {
     const bad = { ...recorded, items: [{ ...recorded.items[0], calories: -50, quantity: 0 }] };
     const { client } = scripted([message("tool_use", [{ type: "tool_use", id: "t1", name: "record_meal", input: bad }])]);

@@ -15,7 +15,8 @@ import { DEFAULT_GOALS, cacheKey, defaultMeal, totals, type FoodItem, type Goals
 
 const MEAL_HOUR: Record<Meal, number> = { breakfast: 8, lunch: 12, snack: 15, dinner: 19 };
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
-const MAX_IMAGE_CHARS = 5_000_000; // ~3.7 MB of base64
+const MAX_IMAGES = 3;
+const MAX_IMAGE_CHARS = 5_000_000; // all photos together, ~3.7 MB of base64
 
 const clamp = (v: unknown, max: number) => {
   const x = Number(v);
@@ -97,29 +98,33 @@ export async function loadSuggestion(key: string, index: number): Promise<OrderS
 
 export async function estimateFood(input: {
   text: string;
-  image?: { data: string; mediaType: string };
+  images?: { data: string; mediaType: string }[];
 }): Promise<EstimateResult> {
   await requireAuth();
   const text = String(input.text ?? "").slice(0, 1000);
-  const image =
-    input.image && IMAGE_TYPES.includes(input.image.mediaType as (typeof IMAGE_TYPES)[number]) && input.image.data.length < MAX_IMAGE_CHARS
-      ? { data: input.image.data, mediaType: input.image.mediaType as (typeof IMAGE_TYPES)[number] }
-      : undefined;
-  if (!text.trim() && !image) return { ok: false, error: "Describe what you ate or add a photo." };
+  const images = (Array.isArray(input.images) ? input.images : [])
+    .filter((i) => typeof i?.data === "string" && IMAGE_TYPES.includes(i.mediaType as (typeof IMAGE_TYPES)[number]))
+    .slice(0, MAX_IMAGES)
+    .map((i) => ({ data: i.data, mediaType: i.mediaType as (typeof IMAGE_TYPES)[number] }));
+  if (images.reduce((n, i) => n + i.data.length, 0) >= MAX_IMAGE_CHARS) {
+    return { ok: false, error: "Those photos are too big together. Try fewer." };
+  }
+  const hasPhotos = images.length > 0;
+  if (!text.trim() && !hasPhotos) return { ok: false, error: "Describe what you ate or add a photo." };
   if (!aiConfigured()) {
     return { ok: false, error: "Lookups need an ANTHROPIC_API_KEY. You can still enter the numbers by hand." };
   }
 
   const key = cacheKey(text);
-  if (!image && key) {
+  if (!hasPhotos && key) {
     const [hit] = await db.select().from(estimateCache).where(eq(estimateCache.key, key));
     if (hit) return { ok: true, estimate: { ...(JSON.parse(hit.resultJson) as MealEstimate), cached: true } };
   }
 
   try {
     const goals = await getGoals();
-    const estimate = await estimateMeal({ text, image, homeArea: goals.homeArea });
-    if (!image && key) {
+    const estimate = await estimateMeal({ text, images, homeArea: goals.homeArea });
+    if (!hasPhotos && key) {
       const resultJson = JSON.stringify(estimate);
       await db
         .insert(estimateCache)

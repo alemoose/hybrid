@@ -15,6 +15,7 @@ How to work:
 - Identify the restaurant if one is named or shown. If it is a chain that publishes nutrition (McDonald's, Chipotle, Whataburger, Cicis, Starbucks, Publix deli, etc.), search for the chain's official nutrition information and use those exact numbers. Set source to "official".
 - For build-your-own places (Chipotle, Subway, Cicis slices), list each component as its own item so the user can adjust portions.
 - For a photo of a nutrition label, read the label and set source to "label".
+- There may be several photos, for example the plate plus the label of one food on it. Use each label's numbers for that food and estimate the rest from the photos and description. Scale labeled foods to what the user says they ate: "3/4 of the package" of a 2-serving package is 1.5 servings. Set source to "label" when most of the calories come from labels.
 - For local or independent restaurants with no published nutrition, estimate from typical recipes and portions for that kind of place. Restaurant portions are large and cooked with more oil, butter and salt than home cooking; estimate realistically, not optimistically. Sodium in particular is usually higher than people expect. Set source to "estimate".
 - Use one search at most for a chain unless the first result is unusable. Never search for local places with no published nutrition.
 - quantity is how many of the unit the user ate; nutrient values are for ONE unit.
@@ -135,20 +136,22 @@ export function apiErrorMessage(err: unknown, what = "Lookup"): EstimateError | 
 
 export async function estimateMeal(input: {
   text: string;
-  image?: { data: string; mediaType: "image/jpeg" | "image/png" | "image/webp" };
+  images?: { data: string; mediaType: "image/jpeg" | "image/png" | "image/webp" }[];
   homeArea: string;
   /** Injected in tests. */
   client?: Anthropic;
 }): Promise<MealEstimate> {
   const client = input.client ?? new Anthropic();
   const content: Anthropic.Beta.BetaContentBlockParam[] = [];
-  if (input.image) {
-    content.push({ type: "image", source: { type: "base64", media_type: input.image.mediaType, data: input.image.data } });
-  }
+  const images = input.images ?? [];
+  images.forEach((image, i) => {
+    if (images.length > 1) content.push({ type: "text", text: `Photo ${i + 1}:` });
+    content.push({ type: "image", source: { type: "base64", media_type: image.mediaType, data: image.data } });
+  });
   const area = input.homeArea ? ` I usually eat around ${input.homeArea}.` : "";
   content.push({
     type: "text",
-    text: `${input.text.trim() || "Log what's in the photo."}${area}`,
+    text: `${input.text.trim() || (images.length > 1 ? "Log what's in the photos." : "Log what's in the photo.")}${area}`,
   });
 
   const messages: Anthropic.Beta.BetaMessageParam[] = [{ role: "user", content }];

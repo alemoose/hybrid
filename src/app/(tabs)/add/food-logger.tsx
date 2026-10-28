@@ -29,6 +29,8 @@ const SOURCE_LABEL: Record<Source, { text: string; tone: PillTone }> = {
 };
 
 const noSubscribe = () => () => {};
+/** Plate plus a label or two; the server takes no more. */
+const MAX_PHOTOS = 3;
 
 let keySeq = 0;
 const nextKey = () => `item-${++keySeq}`;
@@ -104,7 +106,7 @@ export function FoodLogger({
   const router = useRouter();
   const [meal, setMeal] = useState<Meal>(defaultMeal);
   const [text, setText] = useState("");
-  const [photo, setPhoto] = useState<{ data: string; mime: string; preview: string } | null>(null);
+  const [photos, setPhotos] = useState<{ data: string; mime: string; preview: string }[]>([]);
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [review, setReview] = useState<Review | null>(() => (initial ? reviewFrom(initial) : null));
@@ -145,11 +147,13 @@ export function FoodLogger({
     r.start();
   };
 
-  const pickPhoto = async (file: File | undefined) => {
-    if (!file) return;
-    setError(null);
+  const pickPhotos = async (files: File[]) => {
+    const room = MAX_PHOTOS - photos.length;
+    if (!files.length || room <= 0) return;
+    setError(files.length > room ? `Up to ${MAX_PHOTOS} photos per meal; added the first ${room}.` : null);
     try {
-      setPhoto(await resizeImage(file));
+      const added = await Promise.all(files.slice(0, room).map((f) => resizeImage(f)));
+      setPhotos((p) => [...p, ...added].slice(0, MAX_PHOTOS));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't use that photo.");
     }
@@ -172,7 +176,7 @@ export function FoodLogger({
   const lookUp = () => {
     setError(null);
     startLooking(async () => {
-      const res = await estimateFood({ text, image: photo ? { data: photo.data, mediaType: photo.mime } : undefined });
+      const res = await estimateFood({ text, images: photos.map((p) => ({ data: p.data, mediaType: p.mime })) });
       if (res.ok) startReview(res.estimate);
       else setError(res.error);
     });
@@ -495,24 +499,28 @@ export function FoodLogger({
         </label>
       </section>
 
-      {photo ? (
-        <div className="relative self-start">
-          {/* eslint-disable-next-line @next/next/no-img-element -- local data URL preview */}
-          <img src={photo.preview} alt="Your meal photo" className="h-28 rounded-2xl border border-line object-cover" />
-          <button
-            type="button"
-            aria-label="Remove photo"
-            onClick={() => setPhoto(null)}
-            className="absolute -top-2 -right-2 flex size-7 items-center justify-center rounded-full bg-ink text-dark"
-          >
-            <CloseIcon size={14} />
-          </button>
+      {photos.length > 0 ? (
+        <div className="flex flex-wrap gap-3">
+          {photos.map((p, i) => (
+            <div key={p.preview} className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element -- local data URL preview */}
+              <img src={p.preview} alt={`Meal photo ${i + 1}`} className="h-28 max-w-[30vw] rounded-2xl border border-line object-cover" />
+              <button
+                type="button"
+                aria-label={`Remove photo ${i + 1}`}
+                onClick={() => setPhotos((list) => list.filter((_, j) => j !== i))}
+                className="absolute -top-2 -right-2 flex size-7 items-center justify-center rounded-full bg-ink text-dark"
+              >
+                <CloseIcon size={14} />
+              </button>
+            </div>
+          ))}
         </div>
       ) : null}
 
       <div className="flex justify-center gap-2">
-        <button type="button" className="chip gap-1.5" onClick={() => fileRef.current?.click()}>
-          <CameraGlyph /> {photo ? "Change photo" : "Photo"}
+        <button type="button" className="chip gap-1.5" disabled={photos.length >= MAX_PHOTOS} onClick={() => fileRef.current?.click()}>
+          <CameraGlyph /> {photos.length ? `Add photo (${photos.length}/${MAX_PHOTOS})` : "Photo"}
         </button>
         {voiceSupported ? (
           <button type="button" className="chip gap-1.5" aria-pressed={listening} onClick={toggleVoice}>
@@ -523,9 +531,10 @@ export function FoodLogger({
           ref={fileRef}
           type="file"
           accept="image/*"
+          multiple
           className="hidden"
           onChange={(e) => {
-            pickPhoto(e.target.files?.[0]);
+            pickPhotos(Array.from(e.target.files ?? []));
             e.target.value = "";
           }}
         />
@@ -556,7 +565,7 @@ export function FoodLogger({
         {aiReady ? (
           <button
             type="button"
-            disabled={looking || (!text.trim() && !photo)}
+            disabled={looking || (!text.trim() && photos.length === 0)}
             onClick={lookUp}
             className="btn-primary h-14 text-base"
           >
