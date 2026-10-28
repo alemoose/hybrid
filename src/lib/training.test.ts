@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   estimateOneRepMax,
+  formVideoUrl,
   nextRoutineId,
   sessionMetrics,
   suggestNext,
@@ -79,5 +80,12 @@ describe("nextRoutineId", () => {
     expect(nextRoutineId([1, 2, 3], 3)).toBe(1);
     expect(nextRoutineId([1, 2, 3], 99)).toBe(1);
     expect(nextRoutineId([], 1)).toBeNull();
+  });
+});
+
+describe("formVideoUrl", () => {
+  it("puts the equipment first and asks for form", () => {
+    expect(decodeURIComponent(formVideoUrl("Lateral Raise (Dumbbell)"))).toContain("search_query=dumbbell lateral raise proper form");
+    expect(decodeURIComponent(formVideoUrl("Pull-Up"))).toContain("search_query=pull-up proper form");
   });
 });

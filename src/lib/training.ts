@@ -161,3 +161,10 @@ export function nextRoutineId(orderedIds: number[], lastDoneId: number | null): 
   const i = lastDoneId == null ? -1 : orderedIds.indexOf(lastDoneId);
   return orderedIds[(i + 1) % orderedIds.length];
 }
+
+/** A YouTube search for form videos, e.g. "Lateral Raise (Dumbbell)" → "dumbbell lateral raise proper form". */
+export function formVideoUrl(name: string): string {
+  const m = name.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+  const query = (m ? `${m[2]} ${m[1]}` : name).toLowerCase();
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(`${query} proper form`)}`;
+}

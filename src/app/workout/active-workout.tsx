@@ -11,7 +11,7 @@ import { Pill, cx } from "@/components/ui";
 import { clearDraft, newId, readDraft, writeDraft } from "@/lib/draft-storage";
 import { changeTone, formatNumber } from "@/lib/format";
 import { hasReminders, pickReminder, type Reminders } from "@/lib/reminders";
-import { formatWeight, type SetKind } from "@/lib/training";
+import { formVideoUrl, formatWeight, type SetKind } from "@/lib/training";
 import type { DraftExercise, DraftSet, ExerciseOption, WorkoutDraft } from "@/lib/workout-types";
 
 type Props = { plan: WorkoutDraft; exerciseOptions: ExerciseOption[]; intent: "start" | "resume"; reminders: Reminders };
@@ -349,6 +349,15 @@ export default function ActiveWorkout(props: Props) {
           <section key={ex.key} className="flex flex-col gap-2.5 rounded-3xl border border-line bg-card px-3.5 pt-4 pb-3">
             <div className="relative flex items-center gap-2 px-1">
               <h2 className="flex-1 text-[17px] font-bold">{ex.name}</h2>
+              <a
+                href={formVideoUrl(ex.name)}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`Form videos for ${ex.name}`}
+                className="shrink-0 text-[13px] font-semibold text-accent"
+              >
+                How to
+              </a>
               <button
                 type="button"
                 aria-label={`Options for ${ex.name}`}
