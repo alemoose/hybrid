@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { anyBuildingOpen, buildingHours, pollerStale, busyLevel, countLinks, findFeedKey, groupByFacility, hourlyPattern, parseCounts, parseFeedTime, quietestHours, recClock } from "./rec";
+import { anyBuildingOpen, buildingHours, pollerStale, busyLevel, countAge, countLinks, findFeedKey, groupByFacility, hourlyPattern, parseCounts, parseFeedTime, quietestHours, recClock } from "./rec";
 
 const KEY = "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
 
@@ -37,6 +37,18 @@ describe("parseFeedTime", () => {
     expect(parseFeedTime("10/26/2026 10:27 PM")).toEqual({ key: "2026-10-26", hour: 22, minute: 27, weekday: 1 });
     expect(parseFeedTime("10/26/2026 12:05 AM")?.hour).toBe(0);
     expect(parseFeedTime("whenever")).toBeNull();
+  });
+});
+
+describe("countAge", () => {
+  // 6:06 PM Central on a Wednesday.
+  const now = Date.UTC(2026, 9, 28, 23, 6);
+  it("stays quiet under an hour, then rounds down to the half hour", () => {
+    expect(countAge("2026-10-28T17:30:00", now)).toBeNull();
+    expect(countAge("2026-10-28T17:06:00", now)).toBe("1 hr ago");
+    expect(countAge("2026-10-28T15:36:00", now)).toBe("2½ hr ago");
+    expect(countAge("10/27/2026 10:27 PM", now)).toBe("over 12 hr ago");
+    expect(countAge("whenever", now)).toBeNull();
   });
 });
 

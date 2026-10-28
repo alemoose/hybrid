@@ -89,6 +89,28 @@ export function parseFeedTime(s: string): { key: string; hour: number; minute: n
   return { key, hour: h, minute: mi, weekday: new Date(Date.UTC(y, mo - 1, d)).getUTCDay() };
 }
 
+/** How old a count is, like "2½ hr ago", once it's an hour old; null while fresh. Feed times are rec-center local. */
+export function countAge(updated: string, now: number): string | null {
+  const t = parseFeedTime(updated);
+  if (!t) return null;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: REC_TIME_ZONE,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  const [y, mo, d] = t.key.split("-").map(Number);
+  const minutes = (Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute")) - Date.UTC(y, mo - 1, d, t.hour, t.minute)) / 60_000;
+  if (minutes < 60) return null;
+  if (minutes >= 12 * 60) return "over 12 hr ago";
+  const halves = Math.floor(minutes / 30);
+  return `${Math.floor(halves / 2)}${halves % 2 ? "½" : ""} hr ago`;
+}
+
 export function formatHour(hour: number, minute?: number): string {
   const h = hour % 12 === 0 ? 12 : hour % 12;
   const suffix = hour < 12 ? "AM" : "PM";

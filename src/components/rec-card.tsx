@@ -6,6 +6,7 @@ import {
   areaRank,
   buildingHours,
   busyLevel,
+  countAge,
   formatHour,
   parseFeedTime,
   pollerStale,
@@ -87,6 +88,9 @@ export async function RecCard() {
   const top = main.areas.filter((a) => areaRank(a.name) < 9).slice(0, 3);
   const shown = top.length ? top : main.areas.slice(0, 3);
   const stamp = shown.map((a) => parseFeedTime(a.updated)).find((t) => t?.key === today);
+  // The rec center's staff post counts by hand, sometimes hours apart: flag old ones.
+  const latest = shown.find((a) => parseFeedTime(a.updated))?.updated;
+  const age = latest ? countAge(latest, requestTime()) : null;
   // When the weight room is filling up, a nudge to keep your eyes on your own plan.
   const weightRoom = shown.find((a) => areaRank(a.name) === 0);
   const crowded = weightRoom && !weightRoom.closed && busyLevel(weightRoom.pct) !== "quiet" && busyLevel(weightRoom.pct) != null;
@@ -114,7 +118,11 @@ export async function RecCard() {
     <Card className="flex flex-col gap-3.5 p-4">
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-[15px] font-bold">Rec center now</span>
-        {stamp ? <span className="text-xs text-muted">Updated {formatHour(stamp.hour, stamp.minute)}</span> : null}
+        {age ? (
+          <span className="text-xs font-semibold text-warn">Counted {age}</span>
+        ) : stamp ? (
+          <span className="text-xs text-muted">Updated {formatHour(stamp.hour, stamp.minute)}</span>
+        ) : null}
       </div>
       {mainHours ? <HoursLine hours={mainHours} /> : null}
       {shown.map((a) => (

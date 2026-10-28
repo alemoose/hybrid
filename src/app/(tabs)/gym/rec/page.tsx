@@ -2,7 +2,7 @@ import { AreaRow, BUSY, HoursLine, updatedText } from "@/components/rec-card";
 import { Card, EmptyState, PageHeader, SectionLabel, TextLink, cx } from "@/components/ui";
 import { getTimeZone } from "@/lib/auth";
 import { formatInstant, requestTime, todayKey } from "@/lib/dates";
-import { areaRank, buildingHours, busyLevel, formatHour, hourlyPattern, pollerStale, quietestHours, recClock, type Sample } from "@/lib/rec";
+import { areaRank, buildingHours, busyLevel, countAge, formatHour, hourlyPattern, pollerStale, quietestHours, recClock, type Sample } from "@/lib/rec";
 import { getLastPoll, getRecNow, samplesFor } from "@/lib/rec-queries";
 
 export const dynamic = "force-dynamic";
@@ -49,7 +49,17 @@ export default async function RecPage() {
             {g.areas.map((a) => (
               <AreaRow key={a.id || a.name} area={a} today={today} />
             ))}
-            {g.areas[0]?.updated ? <span className="text-xs text-faint">Updated {updatedText(g.areas[0].updated, today)}</span> : null}
+            {g.areas[0]?.updated
+              ? (() => {
+                  const age = countAge(g.areas[0].updated, requestTime());
+                  return (
+                    <span className={cx("text-xs", age ? "font-semibold text-warn" : "text-faint")}>
+                      Updated {updatedText(g.areas[0].updated, today)}
+                      {age ? ` · ${age}, so it may not match the room now` : ""}
+                    </span>
+                  );
+                })()
+              : null}
           </Card>
         </section>
       ))}
