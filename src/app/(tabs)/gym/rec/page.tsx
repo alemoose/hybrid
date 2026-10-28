@@ -66,7 +66,7 @@ export default async function RecPage() {
           <p className={cx("-mt-2 px-1 text-[13px]", pollerStale(lastPoll, requestTime()) ? "font-semibold text-warn" : "text-muted")}>
             {lastPoll
               ? `Automatic checks: last ran ${formatInstant(lastPoll, tz, { weekday: "short", hour: "numeric", minute: "2-digit" })}${
-                  pollerStale(lastPoll, requestTime()) ? ". They seem to have stopped; GitHub hasn't been running the scheduled checks." : ""
+                  pollerStale(lastPoll, requestTime()) ? ". They seem to have stopped; check the job on cron-job.org." : ""
                 }`
               : "Automatic checks haven't run yet."}
           </p>

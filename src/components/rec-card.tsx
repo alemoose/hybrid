@@ -142,8 +142,8 @@ export async function RecCard() {
       ) : null}
       {checksStopped ? (
         <p className="rounded-2xl bg-inner px-3.5 py-3 text-[13px] leading-snug text-warn">
-          Automatic checks stopped (last ran {formatInstant(lastPoll, tz, { weekday: "short", hour: "numeric", minute: "2-digit" })}). GitHub
-          hasn&apos;t been running the scheduled checks; see the Actions tab.
+          Automatic checks stopped (last ran {formatInstant(lastPoll, tz, { weekday: "short", hour: "numeric", minute: "2-digit" })}). Check the
+          job on cron-job.org.
         </p>
       ) : null}
       <div className="flex items-baseline justify-between gap-3 border-t border-line pt-3">

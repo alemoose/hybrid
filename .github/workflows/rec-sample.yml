@@ -3,6 +3,8 @@
 # Hours are UTC: 10:07–05:37 covers 5 AM–12:37 AM Central (4 AM–11:37 PM in winter);
 # the app skips any run while both buildings are closed. Runs at :07 and :37 because
 # GitHub often delays or drops scheduled runs at :00 and :30, its busiest times.
+# It still drops most of them, so a cron-job.org job now does the main work and
+# this is a backup.
 name: Rec center counts
 
 on:
