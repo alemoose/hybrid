@@ -1,9 +1,9 @@
 import { AreaRow, BUSY, HoursLine, updatedText } from "@/components/rec-card";
 import { Card, EmptyState, PageHeader, SectionLabel, TextLink, cx } from "@/components/ui";
 import { getTimeZone } from "@/lib/auth";
-import { requestTime, todayKey } from "@/lib/dates";
-import { areaRank, buildingHours, busyLevel, formatHour, hourlyPattern, quietestHours, recClock, type Sample } from "@/lib/rec";
-import { getRecNow, samplesFor } from "@/lib/rec-queries";
+import { formatInstant, requestTime, todayKey } from "@/lib/dates";
+import { areaRank, buildingHours, busyLevel, formatHour, hourlyPattern, pollerStale, quietestHours, recClock, type Sample } from "@/lib/rec";
+import { getLastPoll, getRecNow, samplesFor } from "@/lib/rec-queries";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ const LAST_HOUR = 23;
 const MIN_HOURS = 8;
 
 export default async function RecPage() {
-  const [now, tz] = await Promise.all([getRecNow(), getTimeZone()]);
+  const [now, tz, lastPoll] = await Promise.all([getRecNow(), getTimeZone(), getLastPoll()]);
   const today = todayKey(tz);
 
   if (now.status !== "ok") {
@@ -60,8 +60,15 @@ export default async function RecPage() {
           <Pattern samples={samples} weekend={isWeekend} title={isWeekend ? "Weekends" : "Weekdays"} />
           <Pattern samples={samples} weekend={!isWeekend} title={isWeekend ? "Weekdays" : "Weekends"} />
           <p className="-mt-1 px-1 text-[13px] leading-relaxed text-muted">
-            Built from the {samples.length} {samples.length === 1 ? "count" : "counts"} Hybrid has seen so far. Every time you open
-            the Gym tab it saves the latest one, so this fills in over a few weeks.
+            Built from the {samples.length} {samples.length === 1 ? "count" : "counts"} saved so far. Hybrid checks every 30 minutes
+            while the gym is open, so this fills in over a couple of weeks.
+          </p>
+          <p className={cx("-mt-2 px-1 text-[13px]", pollerStale(lastPoll, requestTime()) ? "font-semibold text-warn" : "text-muted")}>
+            {lastPoll
+              ? `Automatic checks: last ran ${formatInstant(lastPoll, tz, { weekday: "short", hour: "numeric", minute: "2-digit" })}${
+                  pollerStale(lastPoll, requestTime()) ? ". They seem to have stopped; your GitHub Actions minutes may be used up." : ""
+                }`
+              : "Automatic checks haven't run yet."}
           </p>
         </>
       ) : null}

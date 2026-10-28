@@ -227,3 +227,19 @@ export function anyBuildingOpen(clock: { weekday: number; minutes: number }): bo
     return clock.minutes >= open && clock.minutes < close;
   });
 }
+
+/** The scheduled sampler runs every 30 minutes; two hours of silence while open means it stopped. */
+const POLL_STALE_MS = 2 * 3_600_000;
+
+/**
+ * True when automatic checks look stuck: a building has been open for at least two hours and the
+ * last check is older than that. Never true before the first check ever ran (lastPoll 0).
+ */
+export function pollerStale(lastPoll: number, now: number): boolean {
+  if (!lastPoll) return false;
+  const clock = recClock(now);
+  if (!anyBuildingOpen(clock)) return false;
+  const firstOpen = Math.min(...BUILDINGS.map((b) => b.week[clock.weekday][0]));
+  if (clock.minutes - firstOpen < 120) return false;
+  return now - lastPoll > POLL_STALE_MS;
+}

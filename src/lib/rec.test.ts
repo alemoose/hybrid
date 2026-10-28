@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { anyBuildingOpen, buildingHours, busyLevel, countLinks, findFeedKey, groupByFacility, hourlyPattern, parseCounts, parseFeedTime, quietestHours, recClock } from "./rec";
+import { anyBuildingOpen, buildingHours, pollerStale, busyLevel, countLinks, findFeedKey, groupByFacility, hourlyPattern, parseCounts, parseFeedTime, quietestHours, recClock } from "./rec";
 
 const KEY = "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
 
@@ -107,5 +107,24 @@ describe("building hours", () => {
   it("reads the clock in Tuscaloosa time", () => {
     // 2026-10-27 21:19 UTC is 4:19 PM CDT on a Tuesday.
     expect(recClock(Date.UTC(2026, 9, 27, 21, 19))).toEqual({ weekday: 2, minutes: 16 * 60 + 19 });
+  });
+});
+
+describe("pollerStale", () => {
+  // Tuesday 2026-10-27, 4:00 PM CDT = 21:00 UTC.
+  const tuesday4pm = Date.UTC(2026, 9, 27, 21, 0);
+  const hours = (n: number) => n * 3_600_000;
+
+  it("flags checks that stopped while the gym is open", () => {
+    expect(pollerStale(tuesday4pm - hours(0.5), tuesday4pm)).toBe(false);
+    expect(pollerStale(tuesday4pm - hours(3), tuesday4pm)).toBe(true);
+  });
+
+  it("stays quiet overnight, just after opening, and before the first check", () => {
+    const tuesday3am = Date.UTC(2026, 9, 27, 8, 0);
+    const tuesday6am = Date.UTC(2026, 9, 27, 11, 0);
+    expect(pollerStale(tuesday3am - hours(5), tuesday3am)).toBe(false);
+    expect(pollerStale(tuesday6am - hours(6), tuesday6am)).toBe(false);
+    expect(pollerStale(0, tuesday4pm)).toBe(false);
   });
 });

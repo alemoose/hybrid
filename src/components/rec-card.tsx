@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTimeZone } from "@/lib/auth";
-import { requestTime, todayKey } from "@/lib/dates";
+import { formatInstant, requestTime, todayKey } from "@/lib/dates";
 import {
   SCHEDULE_CHANGES_URL,
   areaRank,
@@ -8,12 +8,13 @@ import {
   busyLevel,
   formatHour,
   parseFeedTime,
+  pollerStale,
   recClock,
   type BuildingHours,
   type Busy,
   type RecArea,
 } from "@/lib/rec";
-import { getRecNow } from "@/lib/rec-queries";
+import { getLastPoll, getRecNow } from "@/lib/rec-queries";
 import { getReminders } from "@/lib/reminder-queries";
 import { pickReminder } from "@/lib/reminders";
 import { Card, cx } from "./ui";
@@ -65,7 +66,7 @@ export function AreaRow({ area, today }: { area: RecArea; today: string }) {
 
 /** The rec center right now: weight room, resistance room and cardio. Links to every area. */
 export async function RecCard() {
-  const [now, tz, reminders] = await Promise.all([getRecNow(), getTimeZone(), getReminders()]);
+  const [now, tz, reminders, lastPoll] = await Promise.all([getRecNow(), getTimeZone(), getReminders(), getLastPoll()]);
   const today = todayKey(tz);
 
   if (now.status !== "ok") {
@@ -96,6 +97,7 @@ export async function RecCard() {
     return room ? [{ facility: g.facility, room }] : [];
   });
   const clock = recClock(requestTime());
+  const checksStopped = pollerStale(lastPoll, requestTime());
   const mainHours = buildingHours(main.facility, clock);
   const quieter = crowded
     ? others.find(
@@ -137,6 +139,12 @@ export async function RecCard() {
           <span className="text-[13px] font-semibold text-ink-2">Filling up. Headphones in, eyes on your plan.</span>
           {note ? <span className="text-[13px] leading-snug text-rose">{note}</span> : null}
         </div>
+      ) : null}
+      {checksStopped ? (
+        <p className="rounded-2xl bg-inner px-3.5 py-3 text-[13px] leading-snug text-warn">
+          Automatic checks stopped (last ran {formatInstant(lastPoll, tz, { weekday: "short", hour: "numeric", minute: "2-digit" })}). Your
+          GitHub Actions minutes may be used up for the month.
+        </p>
       ) : null}
       <div className="flex items-baseline justify-between gap-3 border-t border-line pt-3">
         <Link href="/gym/rec" className="text-sm font-semibold text-accent">
