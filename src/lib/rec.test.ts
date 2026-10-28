@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildingHours, busyLevel, countLinks, findFeedKey, groupByFacility, hourlyPattern, parseCounts, parseFeedTime, quietestHours, recClock } from "./rec";
+import { anyBuildingOpen, buildingHours, busyLevel, countLinks, findFeedKey, groupByFacility, hourlyPattern, parseCounts, parseFeedTime, quietestHours, recClock } from "./rec";
 
 const KEY = "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
 
@@ -95,6 +95,13 @@ describe("building hours", () => {
     // Friday 9 PM: SRC closed, opens Saturday at 9
     expect(buildingHours("Student Recreation Center", { weekday: 5, minutes: 21 * 60 })?.status).toBe("Closed · opens 9 AM tomorrow");
     expect(buildingHours("Aquatic Center", { weekday: 1, minutes: 600 })).toBeNull();
+  });
+
+  it("knows when either building is open", () => {
+    expect(anyBuildingOpen({ weekday: 1, minutes: 6 * 60 })).toBe(true); // SRC from 5:30
+    expect(anyBuildingOpen({ weekday: 1, minutes: 5 * 60 })).toBe(false);
+    expect(anyBuildingOpen({ weekday: 6, minutes: 18 * 60 })).toBe(true); // SRC until 7, Witt closed at 5
+    expect(anyBuildingOpen({ weekday: 6, minutes: 19 * 60 })).toBe(false);
   });
 
   it("reads the clock in Tuscaloosa time", () => {

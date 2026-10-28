@@ -2,7 +2,16 @@ import "server-only";
 import { desc, eq } from "drizzle-orm";
 import { db } from "./db";
 import { recSamples } from "./db/schema";
-import { countLinks, findFeedKey, groupByFacility, parseCounts, type RecArea, type Sample } from "./rec";
+import {
+  anyBuildingOpen,
+  countLinks,
+  findFeedKey,
+  groupByFacility,
+  parseCounts,
+  recClock,
+  type RecArea,
+  type Sample,
+} from "./rec";
 import { getSetting, setSetting } from "./settings";
 
 // Connect2Concepts' public JSON feed: the same data the rec center's own
@@ -58,8 +67,11 @@ export type RecNow =
   | { status: "no-key"; page: string }
   | { status: "error"; message: string };
 
-/** Live counts, finding the feed key on first use. Every update seen is saved for usual-times. */
-export async function getRecNow(): Promise<RecNow> {
+/**
+ * Live counts, finding the feed key on first use. Every update seen is saved for usual-times.
+ * `fresh` skips the two-minute fetch cache, for the scheduled sampler.
+ */
+export async function getRecNow({ fresh = false } = {}): Promise<RecNow> {
   let source = await getRecSource();
   if (!source?.key && (!source || Date.now() - source.checkedAt > RETRY_AFTER)) {
     try {
@@ -76,7 +88,7 @@ export async function getRecNow(): Promise<RecNow> {
   try {
     const res = await fetch(`${FEED}/api/FacilityCount/GetCountsByAccount?AccountAPIKey=${source.key}`, {
       signal: AbortSignal.timeout(8000),
-      next: { revalidate: 120 },
+      ...(fresh ? { cache: "no-store" as const } : { next: { revalidate: 120 } }),
     });
     if (!res.ok) throw new Error(`The counts feed answered ${res.status}.`);
     areas = parseCounts(await res.json());
@@ -85,11 +97,11 @@ export async function getRecNow(): Promise<RecNow> {
   }
   if (areas.length === 0) return { status: "error", message: "The counts feed came back empty." };
 
-  const fresh = areas.filter((a) => a.updated && a.capacity > 0);
-  if (fresh.length) {
+  const counted = areas.filter((a) => a.updated && a.capacity > 0);
+  if (counted.length) {
     await db
       .insert(recSamples)
-      .values(fresh.map((a) => ({ locationId: a.id, location: a.name, count: a.count, capacity: a.capacity, updated: a.updated })))
+      .values(counted.map((a) => ({ locationId: a.id, location: a.name, count: a.count, capacity: a.capacity, updated: a.updated })))
       .onConflictDoNothing();
   }
   return { status: "ok", groups: groupByFacility(areas) };
@@ -103,4 +115,24 @@ export async function samplesFor(locationId: number): Promise<Sample[]> {
     .where(eq(recSamples.locationId, locationId))
     .orderBy(desc(recSamples.updated))
     .limit(5000);
+}
+
+const MIN_POLL_GAP = 10 * 60_000;
+
+/**
+ * The scheduled sampler: saves the latest counts so usual-times fill in without opening
+ * the app. Runs at most every 10 minutes however often it's called, and only while a
+ * building is open.
+ */
+export async function pollRecCounts(now = Date.now()): Promise<{ status: string; areas?: number }> {
+  const last = await getSetting<number>("recLastPoll", 0);
+  if (now - last < MIN_POLL_GAP) return { status: "skipped: polled recently" };
+  if (!anyBuildingOpen(recClock(now))) {
+    return { status: "skipped: closed" };
+  }
+  await setSetting("recLastPoll", now);
+  const result = await getRecNow({ fresh: true });
+  return result.status === "ok"
+    ? { status: "ok", areas: result.groups.reduce((n, g) => n + g.areas.length, 0) }
+    : { status: result.status === "error" ? `error: ${result.message}` : "no feed key" };
 }

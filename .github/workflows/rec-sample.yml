@@ -1,0 +1,20 @@
+# Saves the UA rec center's live headcounts every 30 minutes, so Hybrid's
+# "usual quiet times" charts fill in without opening the app.
+# Hours are UTC: 10:00–05:30 covers 5 AM–12:30 AM Central (4 AM–11:30 PM in winter);
+# the app skips any run while both buildings are closed.
+name: Rec center counts
+
+on:
+  schedule:
+    - cron: "*/30 0-5,10-23 * * *"
+  workflow_dispatch:
+
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Save the latest counts
+        env:
+          APP_URL: ${{ vars.HYBRID_URL || 'https://hybrid-app-sepia.vercel.app' }}
+        run: curl -fsS --max-time 60 -X POST "$APP_URL/api/rec/sample"

@@ -219,3 +219,11 @@ export function buildingHours(facility: string, clock: { weekday: number; minute
   }
   return { name: b.name, today, status: close - clock.minutes <= 60 ? `Closes soon · ${clockText(close)}` : `Open until ${clockText(close)}`, open: true };
 }
+
+/** True while the SRC or the Witt is open on its regular schedule. */
+export function anyBuildingOpen(clock: { weekday: number; minutes: number }): boolean {
+  return BUILDINGS.some((b) => {
+    const [open, close] = b.week[clock.weekday];
+    return clock.minutes >= open && clock.minutes < close;
+  });
+}

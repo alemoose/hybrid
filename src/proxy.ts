@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { SESSION_COOKIE, isValidSession } from "@/lib/session";
 
-const PUBLIC_PATHS = ["/login", "/manifest.webmanifest", "/icon", "/apple-icon"];
+// /api/rec/sample is the scheduled rec-count sampler; it only saves public headcounts.
+const PUBLIC_PATHS = ["/login", "/manifest.webmanifest", "/icon", "/apple-icon", "/api/rec/sample"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
