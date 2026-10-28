@@ -30,6 +30,19 @@ export async function listExerciseOptions(): Promise<ExerciseOption[]> {
     .orderBy(asc(exercises.name));
 }
 
+/** Every exercise with its slug, for the library and its guides. */
+export async function listExerciseLibrary() {
+  return db
+    .select({ id: exercises.id, slug: exercises.slug, name: exercises.name, equipment: exercises.equipment, primaryMuscle: exercises.primaryMuscle })
+    .from(exercises)
+    .orderBy(asc(exercises.name));
+}
+
+export async function getExercise(id: number) {
+  const [exercise] = await db.select().from(exercises).where(eq(exercises.id, id));
+  return exercise ?? null;
+}
+
 export type RoutineSummary = {
   id: number;
   name: string;

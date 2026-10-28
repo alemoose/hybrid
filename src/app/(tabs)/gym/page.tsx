@@ -27,6 +27,14 @@ export default async function GymPage() {
         <span className="text-xl text-accent">+</span> Start empty workout
       </Link>
 
+      <Link href="/gym/exercises" className="flex items-center gap-3 rounded-[20px] border border-line bg-card px-4 py-3.5">
+        <span className="flex flex-1 flex-col gap-0.5">
+          <span className="text-[15px] font-bold">Exercise library</span>
+          <span className="text-[13px] text-muted">How to do every movement, with photos and steps</span>
+        </span>
+        <span className="text-lg text-muted" aria-hidden="true">›</span>
+      </Link>
+
       <Link href="/gym/program" className="flex items-center gap-3 rounded-[20px] border border-line bg-card px-4 py-3.5">
         <span className="flex flex-1 flex-col gap-0.5">
           <span className="text-[15px] font-bold">

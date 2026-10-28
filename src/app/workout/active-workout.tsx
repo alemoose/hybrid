@@ -6,12 +6,14 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { loadExercisePlan, saveWorkout } from "@/app/actions";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { CheckIcon, DownIcon, MoreIcon } from "@/components/icons";
+import { ExerciseGuideSheet } from "@/components/exercise-guide";
 import { ReminderCard } from "@/components/reminder-card";
 import { Pill, cx } from "@/components/ui";
 import { clearDraft, newId, readDraft, writeDraft } from "@/lib/draft-storage";
 import { changeTone, formatNumber } from "@/lib/format";
 import { hasReminders, pickReminder, type Reminders } from "@/lib/reminders";
-import { formVideoUrl, formatWeight, type SetKind } from "@/lib/training";
+import { guideFor } from "@/lib/exercise-guide";
+import { formatWeight, type SetKind } from "@/lib/training";
 import type { DraftExercise, DraftSet, ExerciseOption, WorkoutDraft } from "@/lib/workout-types";
 
 type Props = { plan: WorkoutDraft; exerciseOptions: ExerciseOption[]; intent: "start" | "resume"; reminders: Reminders };
@@ -108,6 +110,7 @@ export default function ActiveWorkout(props: Props) {
   const [rest, setRest] = useState<{ endsAt: number; total: number } | null>(null);
   const [picking, setPicking] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [guideName, setGuideName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reminderHidden, setReminderHidden] = useState(false);
   const [saving, startSaving] = useTransition();
@@ -349,15 +352,14 @@ export default function ActiveWorkout(props: Props) {
           <section key={ex.key} className="flex flex-col gap-2.5 rounded-3xl border border-line bg-card px-3.5 pt-4 pb-3">
             <div className="relative flex items-center gap-2 px-1">
               <h2 className="flex-1 text-[17px] font-bold">{ex.name}</h2>
-              <a
-                href={formVideoUrl(ex.name)}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`Form videos for ${ex.name}`}
+              <button
+                type="button"
+                aria-label={`How to do ${ex.name}`}
+                onClick={() => setGuideName(ex.name)}
                 className="shrink-0 text-[13px] font-semibold text-accent"
               >
                 How to
-              </a>
+              </button>
               <button
                 type="button"
                 aria-label={`Options for ${ex.name}`}
@@ -504,6 +506,8 @@ export default function ActiveWorkout(props: Props) {
       <button type="button" onClick={discard} className="h-11 text-sm font-semibold text-warn">
         Discard workout
       </button>
+
+      {guideName ? <ExerciseGuideSheet name={guideName} guide={guideFor({ name: guideName })} onClose={() => setGuideName(null)} /> : null}
 
       {picking ? (
         <ExercisePicker options={props.exerciseOptions} onPick={addExercise} onClose={() => setPicking(false)} />
