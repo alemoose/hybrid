@@ -154,9 +154,12 @@ export async function RecCard() {
           job on cron-job.org.
         </p>
       ) : null}
-      <div className="flex items-baseline justify-between gap-3 border-t border-line pt-3">
-        <Link href="/gym/rec" className="text-sm font-semibold text-accent">
-          Every area and usual quiet times
+      <div className="flex items-center justify-between gap-3 border-t border-line pt-3">
+        <Link
+          href="/gym/rec"
+          className="rounded-xl border border-accent/50 px-3.5 py-2 text-sm font-semibold text-accent active:bg-accent/10"
+        >
+          All areas &amp; quiet times
         </Link>
         <a href={SCHEDULE_CHANGES_URL} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-muted">
           Schedule changes ↗
