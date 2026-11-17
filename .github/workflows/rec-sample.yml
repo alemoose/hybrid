@@ -20,4 +20,13 @@ jobs:
       - name: Save the latest counts
         env:
           APP_URL: ${{ vars.HYBRID_URL || 'https://hybrid-app-sepia.vercel.app' }}
-        run: curl -fsS --max-time 60 -X POST "$APP_URL/api/rec/sample"
+        # The app answers 200 even when it couldn't save, so fail the run on an error reply
+        # ("error: …" or "no feed key"); "ok" and "skipped: …" are fine.
+        run: |
+          body=$(curl -fsS --max-time 60 -X POST "$APP_URL/api/rec/sample")
+          echo "$body"
+          status=$(jq -r '.status // empty' <<<"$body")
+          case "$status" in
+            ok|skipped*) ;;
+            *) echo "::error::Rec sampler answered: ${status:-$body}"; exit 1 ;;
+          esac

@@ -29,8 +29,13 @@ export default async function RecPage() {
     );
   }
 
-  const weightRoom = now.groups[0].areas.find((a) => areaRank(a.name) === 0) ?? now.groups[0].areas[0];
-  const samples = weightRoom ? await samplesFor(weightRoom.id) : [];
+  // One "usually" chart pair per building: its weight room, or its first area if it has none.
+  const rooms = now.groups.flatMap((g) => {
+    const room = g.areas.find((a) => areaRank(a.name) === 0) ?? (g === now.groups[0] ? g.areas[0] : undefined);
+    return room ? [room] : [];
+  });
+  const usual = await Promise.all(rooms.map(async (room) => ({ room, samples: await samplesFor(room.id) })));
+  const sampleCount = usual.reduce((n, u) => n + u.samples.length, 0);
   const weekday = new Date(`${today}T12:00:00Z`).getUTCDay();
   const isWeekend = weekday === 0 || weekday === 6;
 
@@ -64,13 +69,18 @@ export default async function RecPage() {
         </section>
       ))}
 
-      {weightRoom ? (
-        <>
-          <SectionLabel>Usually · {weightRoom.name}</SectionLabel>
+      {usual.map(({ room, samples }) => (
+        <section key={room.id || room.name} className="flex flex-col gap-2">
+          <SectionLabel>Usually · {room.name}</SectionLabel>
           <Pattern samples={samples} weekend={isWeekend} title={isWeekend ? "Weekends" : "Weekdays"} />
           <Pattern samples={samples} weekend={!isWeekend} title={isWeekend ? "Weekdays" : "Weekends"} />
+        </section>
+      ))}
+
+      {usual.length ? (
+        <>
           <p className="-mt-1 px-1 text-[13px] leading-relaxed text-muted">
-            Built from the {samples.length} {samples.length === 1 ? "count" : "counts"} saved so far. Hybrid checks every 30 minutes
+            Built from the {sampleCount} {sampleCount === 1 ? "count" : "counts"} saved so far. Hybrid checks every 30 minutes
             while the gym is open, so this fills in over a couple of weeks.
           </p>
           <p className={cx("-mt-2 px-1 text-[13px]", pollerStale(lastPoll, requestTime()) ? "font-semibold text-warn" : "text-muted")}>
