@@ -148,20 +148,33 @@ export function countLinks(html: string, pageUrl: string): string[] {
 
 export type Sample = { updated: string; count: number; capacity: number };
 
+export type HourStat = { pct: number; people: number; capacity: number; n: number };
+
 /**
  * Average busyness by hour for weekdays (Mon–Fri) or weekends, from the counts
- * seen so far. Hours with no samples are null.
+ * seen so far: percent full, people in the room, and how many counts it's from.
+ * Hours with no samples are null.
  */
-export function hourlyPattern(samples: Sample[], weekend: boolean): (number | null)[] {
-  const sums = Array.from({ length: 24 }, () => ({ total: 0, n: 0 }));
+export function hourlyStats(samples: Sample[], weekend: boolean): (HourStat | null)[] {
+  const sums = Array.from({ length: 24 }, () => ({ pct: 0, people: 0, capacity: 0, n: 0 }));
   for (const s of samples) {
     const t = parseFeedTime(s.updated);
     if (!t || s.capacity <= 0) continue;
     if ((t.weekday === 0 || t.weekday === 6) !== weekend) continue;
-    sums[t.hour].total += Math.min(100, (s.count / s.capacity) * 100);
-    sums[t.hour].n += 1;
+    const sum = sums[t.hour];
+    sum.pct += Math.min(100, (s.count / s.capacity) * 100);
+    sum.people += s.count;
+    sum.capacity += s.capacity;
+    sum.n += 1;
   }
-  return sums.map(({ total, n }) => (n ? Math.round(total / n) : null));
+  return sums.map(({ pct, people, capacity, n }) =>
+    n ? { pct: Math.round(pct / n), people: Math.round(people / n), capacity: Math.round(capacity / n), n } : null,
+  );
+}
+
+/** Average percent full by hour (see hourlyStats). */
+export function hourlyPattern(samples: Sample[], weekend: boolean): (number | null)[] {
+  return hourlyStats(samples, weekend).map((h) => h?.pct ?? null);
 }
 
 /** The quietest stretch of up to `span` hours that has data, e.g. 6–8 AM. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { anyBuildingOpen, buildingHours, pollerStale, busyLevel, countAge, countLinks, findFeedKey, groupByFacility, hourlyPattern, parseCounts, parseFeedTime, quietestHours, recClock } from "./rec";
+import { anyBuildingOpen, buildingHours, pollerStale, busyLevel, countAge, countLinks, findFeedKey, groupByFacility, hourlyPattern, hourlyStats, parseCounts, parseFeedTime, quietestHours, recClock } from "./rec";
 
 const KEY = "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
 
@@ -83,6 +83,11 @@ describe("usual busyness", () => {
     expect(weekday[17]).toBe(80);
     expect(weekday[12]).toBeNull();
     expect(hourlyPattern(samples, true)[17]).toBe(30);
+  });
+
+  it("keeps people counts and sample sizes per hour", () => {
+    expect(hourlyStats(samples, false)[6]).toEqual({ pct: 15, people: 15, capacity: 100, n: 2 });
+    expect(hourlyStats(samples, false)[12]).toBeNull();
   });
 
   it("finds the quietest stretch with data", () => {

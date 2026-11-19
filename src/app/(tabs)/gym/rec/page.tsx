@@ -1,8 +1,9 @@
-import { AreaRow, BUSY, HoursLine, updatedText } from "@/components/rec-card";
+import { HourChart } from "@/components/hour-chart";
+import { AreaRow, HoursLine, updatedText } from "@/components/rec-card";
 import { Card, EmptyState, PageHeader, SectionLabel, TextLink, cx } from "@/components/ui";
 import { getTimeZone } from "@/lib/auth";
 import { formatInstant, requestTime, todayKey } from "@/lib/dates";
-import { areaRank, buildingHours, busyLevel, countAge, formatHour, hourlyPattern, pollerStale, quietestHours, recClock, type Sample } from "@/lib/rec";
+import { areaRank, buildingHours, countAge, formatHour, hourlyStats, pollerStale, quietestHours, recClock, type Sample } from "@/lib/rec";
 import { getLastPoll, getRecNow, samplesFor } from "@/lib/rec-queries";
 
 export const dynamic = "force-dynamic";
@@ -97,14 +98,14 @@ export default async function RecPage() {
 }
 
 function Pattern({ samples, weekend, title }: { samples: Sample[]; weekend: boolean; title: string }) {
-  const pattern = hourlyPattern(samples, weekend);
-  const hours = pattern.slice(FIRST_HOUR, LAST_HOUR + 1);
+  const stats = hourlyStats(samples, weekend);
+  const pattern = stats.map((h) => h?.pct ?? null);
+  const hours = stats.slice(FIRST_HOUR, LAST_HOUR + 1);
   const known = hours.filter((v) => v != null).length;
   // Name a quiet stretch only once most open hours have been seen.
   const quiet = known >= MIN_HOURS ? quietestHours(pattern) : null;
-  const max = Math.max(50, ...hours.map((v) => v ?? 0));
   return (
-    <Card className="flex flex-col gap-3 p-4">
+    <Card className="flex flex-col gap-1 p-4">
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-[15px] font-bold">{title}</span>
         <span className="text-[13px] text-muted">
@@ -119,24 +120,7 @@ function Pattern({ samples, weekend, title }: { samples: Sample[]; weekend: bool
           )}
         </span>
       </div>
-      <div className="flex h-20 items-end gap-[3px]" aria-label={`${title} by hour`}>
-        {hours.map((v, i) => {
-          const level = busyLevel(v);
-          return (
-            <div
-              key={i}
-              title={`${formatHour(FIRST_HOUR + i)}: ${v == null ? "no data" : `${v}%`}`}
-              className={cx("flex-1 rounded-t-[3px]", level ? BUSY[level].bar : "bg-line")}
-              style={{ height: v == null ? "3px" : `${Math.max(6, (v / max) * 100)}%` }}
-            />
-          );
-        })}
-      </div>
-      <div className="flex justify-between text-[11px] text-faint">
-        {[5, 8, 11, 14, 17, 20, 23].map((h) => (
-          <span key={h}>{formatHour(h).replace(" ", "").toLowerCase()}</span>
-        ))}
-      </div>
+      <HourChart stats={hours} firstHour={FIRST_HOUR} title={title} />
     </Card>
   );
 }
